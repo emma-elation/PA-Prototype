@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+  <title>Practice Home — Prior Auth Requests</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: { extend: { fontFamily: { sans: ['"Open Sans"', 'sans-serif'], roboto: ['Roboto', 'sans-serif'] } } }
+    };
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: 'Open Sans', sans-serif; }
+
+    /* ── Top nav ── */
+    .ehr-nav { background: #1b93ba; }
+    .nav-tab { color: rgba(255,255,255,0.88); font-size: 13px; padding: 0 11px; height: 100%; display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
+    .nav-tab:hover { background: rgba(0,0,0,0.12); }
+    .nav-tab.active { background: rgba(0,0,0,0.22); color: white; box-shadow: inset 0 -2px 0 white; }
+
+    /* ── Toolbar action buttons ── */
+    .tool-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; padding: 4px 10px; border-radius: 4px; }
+    .tool-btn:hover { background: #f0f0f0; }
+    .tool-btn span { font-size: 11px; color: #444; }
+
+    /* ── Schedule panel ── */
+    .sched-slot { display: flex; min-height: 22px; border-bottom: 1px solid #e0e0e0; }
+    .sched-slot.hour-row { background: #f5f5f5; }
+    .sched-slot.quarter { background: #f9f9f9; }
+    .sched-slot.current-time { border-bottom: 1px solid #1b93ba; }
+    .sched-label { width: 38px; text-align: left; padding-left: 8px; font-size: 10px; color: #bbb; line-height: 22px; flex-shrink: 0; }
+    .sched-label.hr { color: #888; font-weight: 600; font-size: 10.5px; }
+    .sched-label.sub { padding-left: 14px; font-size: 9.5px; }
+    .sched-body { flex: 1; }
+
+    /* ── Queue sidebar items ── */
+    .q-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px; border-radius: 4px; cursor: pointer; }
+    .q-item:hover { background: rgba(0,0,0,0.05); }
+    .q-pill { font-size: 11px; font-weight: 600; border-radius: 100px; padding: 1px 7px; white-space: nowrap; }
+    .q-pill-gray { background: #e4e8ea; color: #555; }
+    .q-pill-amber { background: #ffe987; border: 1px solid #ecaf5e; color: #cb5d27; }
+    .q-pill-teal { background: #207393; border: 1px solid #115d7c; color: white; }
+
+    /* ── Status badges ── */
+    .badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 100px; font-size: 10px; font-weight: 600; line-height: 1; white-space: nowrap; font-family: 'Open Sans', sans-serif; }
+    .badge-denied   { background: #fee1e5; color: #ac0116; }
+    .badge-warning  { background: #fdf4be; color: #594f03; }
+    .badge-neutral  { background: #e4eaec; color: #253a40; }
+    .badge-approved { background: #c5f1cf; color: #176325; }
+    .badge-ol-warn  { border: 1px solid #c9ac03; color: #968108; }
+    .badge-ol-crit  { border: 1px solid #fb1933; color: #fb1933; }
+
+    /* ── PA cards ── */
+    .pa-card { background: white; border: 2px solid #ffbb78; border-radius: 6px; padding: 12px 14px; display: flex; align-items: flex-start; gap: 0; cursor: pointer; transition: box-shadow 0.15s; }
+    .pa-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .pa-date-col { width: 80px; flex-shrink: 0; border-right: 1px solid #e8ebec; padding-right: 12px; padding-top: 1px; }
+    .pa-avatar-col { padding: 0 12px 0 10px; flex-shrink: 0; }
+    .pa-body { flex: 1; min-width: 0; display: flex; flex-col; flex-direction: column; gap: 5px; }
+
+    /* Square patient avatar icon */
+    .patient-icon { width: 28px; height: 28px; border-radius: 3px; background: #d0d8dc; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+
+    /* Scrollbar */
+    .pa-scroll::-webkit-scrollbar { width: 5px; }
+    .pa-scroll::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+  </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden" style="min-width:1100px; background:#f0f0f0;">
+
+  <!-- ══ Top Nav ══ -->
+  <header class="ehr-nav flex items-stretch h-[40px] flex-shrink-0">
+    <!-- E Logo -->
+    <div class="w-[36px] flex items-center justify-center bg-[#1278a0] flex-shrink-0 font-bold text-white text-[17px] tracking-tight select-none">E</div>
+
+    <!-- Nav tabs -->
+    <div class="flex items-stretch">
+      <div class="nav-tab active">Practice Home</div>
+      <div class="nav-tab">Find Chart</div>
+      <div class="nav-tab">Reports <svg class="w-2 h-1.5 fill-white opacity-60" viewBox="0 0 8 5"><path d="M0 0l4 5 4-5z"/></svg></div>
+      <div class="nav-tab">Elation Billing</div>
+      <div class="nav-tab text-yellow-300"><span>⚠</span> I need help <svg class="w-2 h-1.5 fill-yellow-300 opacity-70" viewBox="0 0 8 5"><path d="M0 0l4 5 4-5z"/></svg></div>
+    </div>
+
+
+    <!-- Right side -->
+    <div class="ml-auto flex items-center gap-3 pr-4 text-white text-[12px]">
+      <svg class="w-[15px] h-[15px] fill-white opacity-70" viewBox="0 0 24 24"><path d="M12 22a2 2 0 002-2H10a2 2 0 002 2zm6-6V11a6 6 0 00-5-5.91V4a1 1 0 00-2 0v1.09A6 6 0 006 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+      <span class="opacity-85">testdoctor2@elationemr.com</span>
+      <span class="opacity-55 cursor-pointer hover:opacity-90">Logout</span>
+    </div>
+  </header>
+
+  <!-- ══ Main body ══ -->
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- ── Left: Schedule panel ── -->
+    <div class="flex-shrink-0 flex flex-col overflow-hidden border-r border-[#c8cdd2]" style="width:340px; background:#f5f5f5;">
+      <!-- Date + provider header -->
+      <div class="flex flex-col gap-1 px-3 py-2 border-b border-[#ddd]" style="background:#f5f5f5;">
+        <div class="flex items-center gap-1">
+          <span class="text-[#2a6bbc] font-semibold text-[13px]">Wed, Feb 25, 2026</span>
+          <button class="w-[18px] h-[18px] border border-[#c0c6cb] rounded text-[11px] flex items-center justify-center text-[#555] bg-white hover:bg-gray-100">‹</button>
+          <button class="w-[18px] h-[18px] border border-[#c0c6cb] rounded text-[11px] flex items-center justify-center text-[#555] bg-white hover:bg-gray-100">›</button>
+        </div>
+        <button class="flex items-center gap-1 text-[13px] text-[#222] self-start hover:text-[#2a6bbc]">
+          Beverly Crusher, MD
+          <svg class="w-2 h-1.5 fill-[#666]" viewBox="0 0 8 5"><path d="M0 0l4 5 4-5z"/></svg>
+        </button>
+      </div>
+      <!-- Schedule action buttons -->
+      <div class="flex items-center gap-1 px-2 py-1.5 border-b border-[#ddd]" style="background:#f5f5f5;">
+        <button class="flex items-center gap-0.5 px-2 py-[3px] border border-[#c0c6cb] rounded text-[11px] text-[#333] bg-white hover:bg-gray-50 whitespace-nowrap">
+          <span class="text-[#1b93ba] font-bold text-[12px] leading-none">+</span> Appointment
+        </button>
+        <button class="px-2 py-[3px] border border-[#c0c6cb] rounded text-[11px] text-[#333] bg-white hover:bg-gray-50">Today</button>
+        <button class="px-2 py-[3px] border border-[#c0c6cb] rounded text-[11px] text-[#333] bg-white hover:bg-gray-50">Refresh</button>
+      </div>
+      <!-- PST search — full width -->
+      <div class="flex items-center gap-1 px-2 py-1.5 border-b border-[#ddd]" style="background:#f5f5f5;">
+        <span class="text-[10px] text-[#888] font-semibold flex-shrink-0">PST</span>
+        <div class="flex-1 flex items-center border border-[#c0c6cb] rounded px-1.5 py-[3px] bg-white">
+          <input class="flex-1 text-[10px] outline-none text-[#444] placeholder-[#aaa] bg-transparent" placeholder="Find appointments by patient..." />
+          <svg class="w-3 h-3 text-[#999] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </div>
+      </div>
+      <!-- Day header -->
+      <div class="text-center text-[12px] font-bold text-[#333] py-1.5 border-b border-[#ddd]" style="background:#ececec;">Wednesday 02/25</div>
+      <!-- Time grid -->
+      <div class="flex-1 overflow-y-auto">
+        <div class="sched-slot hour-row"><span class="sched-label hr">5am</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:15</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:30</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:45</span><div class="sched-body"></div></div>
+        <div class="sched-slot hour-row"><span class="sched-label hr">6am</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:15</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:30</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:45</span><div class="sched-body"></div></div>
+        <div class="sched-slot hour-row"><span class="sched-label hr">7am</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:15</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:30</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:45</span><div class="sched-body"></div></div>
+        <div class="sched-slot hour-row"><span class="sched-label hr">8am</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:15</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:30</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:45</span><div class="sched-body"></div></div>
+        <!-- 9am: current time row -->
+        <div class="sched-slot current-time hour-row" style="position:relative;">
+          <span class="sched-label hr" style="color:#1b93ba;">9am</span>
+          <div class="sched-body" style="position:relative;">
+            <div style="position:absolute;left:-4px;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:#1b93ba;"></div>
+            <div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);height:1.5px;background:#1b93ba;right:0;"></div>
+          </div>
+        </div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:15</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:30</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:45</span><div class="sched-body"></div></div>
+        <div class="sched-slot hour-row"><span class="sched-label hr">10am</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:15</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:30</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:45</span><div class="sched-body"></div></div>
+        <div class="sched-slot hour-row"><span class="sched-label hr">11am</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:15</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:30</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:45</span><div class="sched-body"></div></div>
+        <div class="sched-slot hour-row"><span class="sched-label hr">12pm</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:15</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:30</span><div class="sched-body"></div></div>
+        <div class="sched-slot quarter"><span class="sched-label sub">:45</span><div class="sched-body"></div></div>
+        <div class="sched-slot hour-row"><span class="sched-label hr">1pm</span><div class="sched-body"></div></div>
+      </div>
+    </div>
+
+    <!-- ── Right: toolbar + content ── -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+      <!-- Toolbar row (scoped to right column only) -->
+      <div class="bg-white border-b border-[#d0d4d8] flex items-center flex-shrink-0 h-[54px]">
+        <div class="flex items-center px-3 gap-1">
+          <button class="tool-btn">
+            <svg class="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12h6M12 9v6"/></svg>
+            <span>New Chart</span>
+          </button>
+          <button class="tool-btn">
+            <svg class="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            <span>Message</span>
+          </button>
+          <button class="tool-btn">
+            <svg class="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>Handouts</span>
+          </button>
+          <button class="tool-btn relative">
+            <svg class="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.5"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
+            <span>Fax Inbox</span>
+            <span class="absolute top-0 right-1 bg-[#1b93ba] text-white text-[8px] font-bold rounded-full w-[14px] h-[14px] flex items-center justify-center">3</span>
+          </button>
+          <button class="tool-btn">
+            <svg class="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+            <span>Payment</span>
+          </button>
+          <button class="tool-btn">
+            <svg class="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>Membership</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Patient global search -->
+      <div class="pl-10 pr-20 pt-5 pb-2.5 flex-shrink-0" style="background:#f0f0f0;">
+        <div class="flex items-center border border-[#c8cdd2] rounded-[6px] px-3 h-[42px] bg-white" style="max-width:820px;">
+          <svg class="w-[18px] h-[18px] text-[#aaa] mr-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="flex-1 text-[17px] text-[#6b7981] outline-none placeholder-[#9aa5aa] bg-transparent" placeholder="Find patient chart..." />
+        </div>
+      </div>
+
+      <!-- Queue nav + PA list -->
+      <div class="flex flex-1 overflow-hidden pl-10">
+
+        <!-- ── Queue nav sidebar ── -->
+        <div class="flex-shrink-0 pt-5 pb-4 px-3 flex flex-col gap-0.5 overflow-y-auto" style="width:190px; background:#f0f0f0;">
+          <!-- View Queue For -->
+          <p class="text-[12px] text-[#555] mb-1">View Queue For:</p>
+          <div class="flex items-center mb-4">
+            <div class="border border-[#9aa5aa] rounded-[3px] px-2 py-[3px] bg-white flex items-center gap-1 w-full cursor-pointer hover:bg-gray-50">
+              <span class="text-[13px] text-[#222] flex-1">Self</span>
+              <svg class="w-2 h-1.5 fill-[#666]" viewBox="0 0 8 5"><path d="M0 0l4 5 4-5z"/></svg>
+            </div>
+          </div>
+
+          <!-- Urgent -->
+          <div class="q-item">
+            <span class="text-[13px] text-[#333]">Urgent</span>
+            <span class="q-pill q-pill-amber">3</span>
+          </div>
+
+          <div class="h-px bg-[#e8ebec] my-2"></div>
+
+          <div class="q-item">
+            <span class="text-[13px] text-[#333]">Office Messages</span>
+            <span class="q-pill q-pill-gray">1</span>
+          </div>
+          <div class="q-item">
+            <span class="text-[13px] text-[#333]">Rx Requests</span>
+            <span class="q-pill q-pill-gray">0</span>
+          </div>
+          <div class="q-item">
+            <span class="text-[13px] text-[#333]">Reports</span>
+            <span class="q-pill q-pill-gray">1</span>
+          </div>
+
+          <!-- Prior Auth Requests — active -->
+          <div class="flex items-center justify-between rounded-[4px] px-2 py-1.5 cursor-pointer mt-0.5 mb-0.5" style="background:#1d94bc;">
+            <span class="text-[13px] font-semibold text-white">Prior Auth Requests</span>
+            <span class="q-pill q-pill-teal">7</span>
+          </div>
+
+          <div class="h-px bg-[#e8ebec] my-2"></div>
+
+          <div class="q-item">
+            <span class="text-[13px] text-[#333]">Reminders</span>
+            <span class="q-pill q-pill-gray">1</span>
+          </div>
+          <div class="q-item">
+            <span class="text-[13px] text-[#333]">Patient Letters</span>
+            <span class="q-pill q-pill-gray">0</span>
+          </div>
+          <div class="q-item">
+            <span class="text-[13px] text-[#333]">Provider Letters</span>
+            <span class="q-pill q-pill-gray">0</span>
+          </div>
+
+          <div class="h-px bg-[#e8ebec] my-2"></div>
+
+          <div class="q-item">
+            <span class="text-[13px] text-[#333]">Draft Notes</span>
+            <span class="q-pill q-pill-gray">0</span>
+          </div>
+          <div class="q-item">
+            <span class="text-[13px] text-[#333]">Draft Letters</span>
+            <span class="q-pill q-pill-gray">0</span>
+          </div>
+          <div class="q-item">
+            <span class="text-[13px] text-[#333]">Draft Orders</span>
+            <span class="q-pill q-pill-gray">0</span>
+          </div>
+        </div>
+
+        <!-- ── PA list content ── -->
+        <div class="flex-1 flex flex-col overflow-hidden py-4 pr-20">
+
+          <!-- Filter bar -->
+          <div class="flex flex-col gap-2 mb-4 flex-shrink-0" style="max-width:820px;">
+            <div class="flex items-center gap-2">
+              <!-- Search input -->
+              <div class="flex items-center gap-1.5 bg-white border border-[#9aa5aa] rounded-[4px] px-2 h-[28px] flex-1">
+                <svg class="w-3 h-3 flex-shrink-0 text-[#aaa]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input class="flex-1 text-[12px] italic text-[rgba(0,24,38,0.55)] outline-none bg-transparent" placeholder="Search by patient, medication, payer, or text..." />
+              </div>
+              <!-- Dropdowns -->
+              <div class="relative" id="all-providers-wrapper">
+                <button id="all-providers-btn" onclick="toggleAllProviders(event)" class="flex items-center gap-1.5 bg-white border border-[#9aa5aa] rounded-[3px] px-2 h-[26px] whitespace-nowrap hover:bg-gray-50">
+                  <span class="text-[12px] text-[#333]">All Providers</span>
+                  <svg class="w-2 h-1.5 fill-[#666]" viewBox="0 0 8 5"><path d="M0 0l4 5 4-5z"/></svg>
+                </button>
+                <div id="all-providers-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; width:205px; background:white; border-radius:4px; box-shadow:0 0 1px rgba(9,30,66,0.48), 0 4px 8px rgba(9,30,66,0.16); z-index:100; padding:8px;">
+                  <label class="flex items-center gap-1 py-[3px] cursor-pointer">
+                    <span class="vds-checkbox checked flex-shrink-0"></span>
+                    <span class="text-[14px] text-[#142125] leading-[1.6]">All Providers</span>
+                  </label>
+                  <label class="flex items-center gap-1 py-[3px] cursor-pointer">
+                    <span class="vds-checkbox checked flex-shrink-0"></span>
+                    <span class="text-[14px] text-[#142125] leading-[1.6]">Dr. Claire Hendricks</span>
+                  </label>
+                  <label class="flex items-center gap-1 py-[3px] cursor-pointer">
+                    <span class="vds-checkbox checked flex-shrink-0"></span>
+                    <span class="text-[14px] text-[#142125] leading-[1.6]">Dr. Priya Nambiar</span>
+                  </label>
+                  <label class="flex items-center gap-1 py-[3px] cursor-pointer">
+                    <span class="vds-checkbox checked flex-shrink-0"></span>
+                    <span class="text-[14px] text-[#142125] leading-[1.6]">Dr. Marcus Oyelaran</span>
+                  </label>
+                  <label class="flex items-center gap-1 py-[3px] cursor-pointer">
+                    <span class="vds-checkbox checked flex-shrink-0"></span>
+                    <span class="text-[14px] text-[#142125] leading-[1.6]">Dr. Sofia Reinholt</span>
+                  </label>
+                  <label class="flex items-center gap-1 py-[3px] cursor-pointer">
+                    <span class="vds-checkbox checked flex-shrink-0"></span>
+                    <span class="text-[14px] text-[#142125] leading-[1.6]">Dr. James Whitfield</span>
+                  </label>
+                </div>
+              </div>
+              <div class="relative" id="needs-attention-wrapper">
+                <button id="needs-attention-btn" onclick="toggleNeedsAttention(event)" class="flex items-center gap-1.5 bg-white border border-[#9aa5aa] rounded-[3px] px-2 h-[26px] whitespace-nowrap hover:bg-gray-50">
+                  <span class="text-[12px] text-[#333]">Needs Attention</span>
+                  <svg class="w-2 h-1.5 fill-[#666]" viewBox="0 0 8 5"><path d="M0 0l4 5 4-5z"/></svg>
+                </button>
+                <!-- Dropdown -->
+                <div id="needs-attention-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; width:229px; background:white; border-radius:4px; box-shadow:0 0 1px rgba(9,30,66,0.48), 0 4px 8px rgba(9,30,66,0.16); z-index:100; padding:8px;">
+                  <label class="flex items-center gap-1 py-[3px] cursor-pointer group">
+                    <span class="vds-checkbox checked flex-shrink-0"></span>
+                    <span class="text-[14px] text-[#142125] leading-[1.6] flex-1">Needs Attention</span>
+                    <div class="info-icon-wrapper" onclick="event.preventDefault(); event.stopPropagation();">
+                      <svg class="w-[14px] h-[14px] flex-shrink-0" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#8398a0" stroke-width="1.5"/><text x="8" y="12" text-anchor="middle" font-size="10" font-family="Open Sans,sans-serif" font-weight="700" fill="#8398a0">i</text></svg>
+                      <div class="info-tooltip">
+                        <div class="info-tooltip-body">Includes PAs that require action or acknowledgment i.e. PAs awaiting user input, pending a response for more than 3 days, or with a denied or approved status.</div>
+                        <div class="info-tooltip-arrow"></div>
+                      </div>
+                    </div>
+                  </label>
+                  <label class="flex items-center gap-1 py-[3px] cursor-pointer group">
+                    <span class="vds-checkbox flex-shrink-0"></span>
+                    <span class="text-[14px] text-[#142125] leading-[1.6]">Input Needed</span>
+                  </label>
+                  <label class="flex items-center gap-1 py-[3px] cursor-pointer group">
+                    <span class="vds-checkbox flex-shrink-0"></span>
+                    <span class="text-[14px] text-[#142125] leading-[1.6]">Pending Response</span>
+                  </label>
+                  <label class="flex items-center gap-1 py-[3px] cursor-pointer group">
+                    <span class="vds-checkbox flex-shrink-0"></span>
+                    <span class="text-[14px] text-[#142125] leading-[1.6]">Denied</span>
+                  </label>
+                  <label class="flex items-center gap-1 py-[3px] cursor-pointer group">
+                    <span class="vds-checkbox flex-shrink-0"></span>
+                    <span class="text-[14px] text-[#142125] leading-[1.6]">Partially Approved</span>
+                  </label>
+                  <label class="flex items-center gap-1 py-[3px] cursor-pointer group">
+                    <span class="vds-checkbox flex-shrink-0"></span>
+                    <span class="text-[14px] text-[#142125] leading-[1.6]">Approved</span>
+                  </label>
+                  <label class="flex items-center gap-1 py-[3px] cursor-pointer group">
+                    <span class="vds-checkbox flex-shrink-0"></span>
+                    <span class="text-[14px] text-[#142125] leading-[1.6]">Appeal in Progress</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <a href="#" class="text-[12px] text-[#2a6bbc] hover:underline">Launch first 3 patients</a>
+              <div class="flex items-center gap-5">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[12px] text-[#555]">Sort by:</span>
+                  <button class="flex items-center gap-1 text-[12px] text-[#2a6bbc]">
+                    Priority
+                    <svg class="w-1.5 h-1.5 fill-[#2a6bbc]" style="transform:rotate(180deg)" viewBox="0 0 8 5"><path d="M0 0l4 5 4-5z"/></svg>
+                  </button>
+                </div>
+                <a href="#" class="text-[12px] text-[#2a6bbc] hover:underline">Refresh</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- PA cards list -->
+          <div class="pa-scroll flex-1 overflow-y-auto flex flex-col gap-[12px] pr-1" style="max-width:820px;">
+
+            <!-- doc icon helper (reused inline) -->
+
+            <!-- ── Margaret Holloway — Denied ── -->
+            <div class="pa-card">
+              <div class="pa-date-col">
+                <span class="text-[12px] font-medium font-['Roboto',sans-serif] text-[#333]">10/12/2026</span>
+              </div>
+              <div class="pa-avatar-col">
+                <div class="patient-icon">
+                  <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
+                    <circle cx="14" cy="10" r="5.5" fill="#8fa5ae"/>
+                    <path d="M3 28c0-6.07 4.93-11 11-11s11 4.93 11 11" fill="#8fa5ae"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="pa-body">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="badge badge-denied">Denied</span>
+                  <span class="text-[14px] font-['Roboto',sans-serif] text-[#296bbc] cursor-pointer hover:underline">Margaret Holloway</span>
+                  <span class="text-[13px] font-['Roboto',sans-serif] text-[#666]">(F)</span>
+                  <span class="text-[13px] font-['Roboto',sans-serif] text-[#666]">D.O.B.: 03/14/1958 (68 yrs, 1 mo)</span>
+                </div>
+                <div class="flex items-center gap-2 text-[12px] font-['Roboto',sans-serif] text-[#666]">
+                  <span>Aetna</span>
+                  <span>Submitted on 02/28/2026 by Staff One</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <svg class="w-[11px] h-[11px] flex-shrink-0" viewBox="0 0 12 14" fill="none"><path d="M7 1H2a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5L7 1z" stroke="#2a6bbc" stroke-width="1.2"/><path d="M7 1v4h4" stroke="#2a6bbc" stroke-width="1.2"/></svg>
+                  <a href="#" onclick="event.preventDefault(); openDenialDialog();" class="text-[11px] font-semibold text-[#2a6bbc] hover:underline">PA Request — Lisdexamfetamine (Vyvanse) 50mg (AUTH-2024-8834721)</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Derek Fontaine — Input Needed ── -->
+            <div class="pa-card">
+              <div class="pa-date-col">
+                <span class="text-[12px] font-medium font-['Roboto',sans-serif] text-[#333]">10/12/2026</span>
+              </div>
+              <div class="pa-avatar-col">
+                <div class="patient-icon">
+                  <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
+                    <circle cx="14" cy="10" r="5.5" fill="#8fa5ae"/>
+                    <path d="M3 28c0-6.07 4.93-11 11-11s11 4.93 11 11" fill="#8fa5ae"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="pa-body">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="badge badge-warning">Input Needed</span>
+                  <span class="text-[14px] font-['Roboto',sans-serif] text-[#296bbc] cursor-pointer hover:underline">Derek Fontaine</span>
+                  <span class="text-[13px] font-['Roboto',sans-serif] text-[#666]">(M)</span>
+                  <span class="text-[13px] font-['Roboto',sans-serif] text-[#666]">D.O.B.: 07/29/1971 (54 yrs, 10 mo)</span>
+                </div>
+                <div class="flex items-center gap-2 text-[12px] font-['Roboto',sans-serif] text-[#666]">
+                  <span>Aetna</span>
+                  <span>Requested on 03/20/2026 by Beverly Crusher</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <svg class="w-[11px] h-[11px] flex-shrink-0" viewBox="0 0 12 14" fill="none"><path d="M7 1H2a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5L7 1z" stroke="#2a6bbc" stroke-width="1.2"/><path d="M7 1v4h4" stroke="#2a6bbc" stroke-width="1.2"/></svg>
+                  <a href="#" onclick="event.preventDefault(); openPaDialog();" class="text-[11px] font-semibold text-[#2a6bbc] hover:underline">PA Request — Humira 40mg/0.8mL injectable (AUTH-2024-8834721)</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Simone Okafor — Appeal Input Needed ── -->
+            <div class="pa-card">
+              <div class="pa-date-col">
+                <span class="text-[12px] font-medium font-['Roboto',sans-serif] text-[#333]">10/12/2026</span>
+              </div>
+              <div class="pa-avatar-col">
+                <div class="patient-icon">
+                  <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
+                    <circle cx="14" cy="10" r="5.5" fill="#8fa5ae"/>
+                    <path d="M3 28c0-6.07 4.93-11 11-11s11 4.93 11 11" fill="#8fa5ae"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="pa-body">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="badge badge-warning">Appeal Input Needed</span>
+                  <span class="text-[14px] font-['Roboto',sans-serif] text-[#296bbc] cursor-pointer hover:underline">Simone Okafor</span>
+                  <span class="text-[13px] font-['Roboto',sans-serif] text-[#666]">(F)</span>
+                  <span class="text-[13px] font-['Roboto',sans-serif] text-[#666]">D.O.B.: 11/03/1989 (36 yrs, 5 mo)</span>
+                </div>
+                <div class="flex items-center gap-2 text-[12px] font-['Roboto',sans-serif] text-[#666]">
+                  <span>Aetna</span>
+                  <span>Submitted on 03/28/2026 by Beverly Crusher</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <svg class="w-[11px] h-[11px] flex-shrink-0" viewBox="0 0 12 14" fill="none"><path d="M7 1H2a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5L7 1z" stroke="#2a6bbc" stroke-width="1.2"/><path d="M7 1v4h4" stroke="#2a6bbc" stroke-width="1.2"/></svg>
+                  <a href="#" onclick="event.preventDefault(); openAppealDialog('okafor');" class="text-[11px] font-semibold text-[#2a6bbc] hover:underline">PA Request — Erenumab (Aimovig) 140mg (AUTH-2024-8834726)</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Thomas Berstrom — Pending Response + 7 Days ── -->
+            <div class="pa-card">
+              <div class="pa-date-col">
+                <span class="text-[12px] font-medium font-['Roboto',sans-serif] text-[#333]">10/12/2026</span>
+              </div>
+              <div class="pa-avatar-col">
+                <div class="patient-icon">
+                  <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
+                    <circle cx="14" cy="10" r="5.5" fill="#8fa5ae"/>
+                    <path d="M3 28c0-6.07 4.93-11 11-11s11 4.93 11 11" fill="#8fa5ae"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="pa-body">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="badge badge-neutral">Pending Response</span>
+                  <span class="text-[14px] font-['Roboto',sans-serif] text-[#296bbc] cursor-pointer hover:underline">Thomas Berstrom</span>
+                  <span class="text-[13px] font-['Roboto',sans-serif] text-[#666]">(M)</span>
+                  <span class="text-[13px] font-['Roboto',sans-serif] text-[#666]">D.O.B.: 05/17/1945 (79 yrs, 11 mo)</span>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap text-[12px] font-['Roboto',sans-serif] text-[#666]">
+                  <span>Aetna</span>
+                  <span>Submitted on 04/01/2026 by Staff One</span>
+                  <span class="badge badge-ol-crit">7 Days Since Submission</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <svg class="w-[11px] h-[11px] flex-shrink-0" viewBox="0 0 12 14" fill="none"><path d="M7 1H2a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5L7 1z" stroke="#2a6bbc" stroke-width="1.2"/><path d="M7 1v4h4" stroke="#2a6bbc" stroke-width="1.2"/></svg>
+                  <a href="#" onclick="event.preventDefault(); openPendingDialog('berstrom');" class="text-[11px] font-semibold text-[#2a6bbc] hover:underline">PA Request — Rivaroxaban (Xarelto) 20mg (AUTH-2024-8834721)</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Priya Nandakumar — Pending Response + 3 Days ── -->
+            <div class="pa-card">
+              <div class="pa-date-col">
+                <span class="text-[12px] font-medium font-['Roboto',sans-serif] text-[#333]">10/12/2026</span>
+              </div>
+              <div class="pa-avatar-col">
+                <div class="patient-icon">
+                  <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
+                    <circle cx="14" cy="10" r="5.5" fill="#8fa5ae"/>
+                    <path d="M3 28c0-6.07 4.93-11 11-11s11 4.93 11 11" fill="#8fa5ae"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="pa-body">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="badge badge-neutral">Pending Response</span>
+                  <span class="text-[14px] font-['Roboto',sans-serif] text-[#296bbc] cursor-pointer hover:underline">Priya Nandakumar</span>
+                  <span class="text-[13px] font-['Roboto',sans-serif] text-[#666]">(F)</span>
+                  <span class="text-[13px] font-['Roboto',sans-serif] text-[#666]">D.O.B.: 08/22/1995 (30 yrs, 8 mo)</span>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap text-[12px] font-['Roboto',sans-serif] text-[#666]">
+                  <span>Aetna</span>
+                  <span>Submitted on 04/05/2026 by Staff One</span>
+                  <span class="badge badge-ol-warn">3 Days Since Submission</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <svg class="w-[11px] h-[11px] flex-shrink-0" viewBox="0 0 12 14" fill="none"><path d="M7 1H2a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5L7 1z" stroke="#2a6bbc" stroke-width="1.2"/><path d="M7 1v4h4" stroke="#2a6bbc" stroke-width="1.2"/></svg>
+                  <a href="#" onclick="event.preventDefault(); openPendingDialog('nandakumar');" class="text-[11px] font-semibold text-[#2a6bbc] hover:underline">PA Request — Semaglutide (Ozempic) 1mg (AUTH-2024-8834721)</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Carlos Mendieta — Approved + Draft Order ── -->
+            <div class="pa-card">
+              <div class="pa-date-col">
+                <span class="text-[12px] font-medium font-['Roboto',sans-serif] text-[#333]">10/12/2026</span>
+              </div>
+              <div class="pa-avatar-col">
+                <div class="patient-icon">
+                  <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
+                    <circle cx="14" cy="10" r="5.5" fill="#8fa5ae"/>
+                    <path d="M3 28c0-6.07 4.93-11 11-11s11 4.93 11 11" fill="#8fa5ae"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="pa-body">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="badge badge-approved">Approved</span>
+                  <span class="text-[14px] font-['Roboto',sans-serif] text-[#296bbc] cursor-pointer hover:underline">Carlos Mendieta</span>
+                  <span class="text-[13px] font-['Roboto',sans-serif] text-[#666]">(M)</span>
+                  <span class="text-[13px] font-['Roboto',sans-serif] text-[#666]">D.O.B.: 12/09/1963 (62 yrs, 5 mo)</span>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap text-[12px] font-['Roboto',sans-serif] text-[#666]">
+                  <span>Aetna</span>
+                  <span>Approved on 04/28/2026</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <svg class="w-[11px] h-[11px] flex-shrink-0" viewBox="0 0 12 14" fill="none"><path d="M7 1H2a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5L7 1z" stroke="#2a6bbc" stroke-width="1.2"/><path d="M7 1v4h4" stroke="#2a6bbc" stroke-width="1.2"/></svg>
+                  <a href="#" onclick="event.preventDefault(); openApprovalDialog('mendieta');" class="text-[11px] font-semibold text-[#2a6bbc] hover:underline">PA Request — Empagliflozin (Jardiance) 10mg (AUTH-2024-8834724)</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Linda Beaumont — Approved ── -->
+            <div class="pa-card">
+              <div class="pa-date-col">
+                <span class="text-[12px] font-medium font-['Roboto',sans-serif] text-[#333]">10/12/2026</span>
+              </div>
+              <div class="pa-avatar-col">
+                <div class="patient-icon">
+                  <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
+                    <circle cx="14" cy="10" r="5.5" fill="#8fa5ae"/>
+                    <path d="M3 28c0-6.07 4.93-11 11-11s11 4.93 11 11" fill="#8fa5ae"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="pa-body">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="badge badge-approved">Approved</span>
+                  <span class="text-[14px] font-['Roboto',sans-serif] text-[#296bbc] cursor-pointer hover:underline">Linda Beaumont</span>
+                  <span class="text-[13px] font-['Roboto',sans-serif] text-[#666]">(F)</span>
+                  <span class="text-[13px] font-['Roboto',sans-serif] text-[#666]">D.O.B.: 08/29/1937 (88 yrs, 5 mo)</span>
+                </div>
+                <div class="flex items-center gap-2 text-[12px] font-['Roboto',sans-serif] text-[#666]">
+                  <span>Aetna</span>
+                  <span>Approved on 04/28/2026</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <svg class="w-[11px] h-[11px] flex-shrink-0" viewBox="0 0 12 14" fill="none"><path d="M7 1H2a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5L7 1z" stroke="#2a6bbc" stroke-width="1.2"/><path d="M7 1v4h4" stroke="#2a6bbc" stroke-width="1.2"/></svg>
+                  <a href="#" onclick="event.preventDefault(); openApprovalDialog('beaumont');" class="text-[11px] font-semibold text-[#2a6bbc] hover:underline">PA Request — Pembrolizumab (Keytruda) 200mg IV (AUTH-2024-8834725)</a>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /pa-scroll -->
+        </div><!-- /PA list -->
+      </div><!-- /queue + list row -->
+    </div><!-- /right content -->
+  </div><!-- /main body -->
+
+  <style>
+    .vds-checkbox {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0;
+      border: 1.5px solid #8398a0; background: white; transition: background 0.1s, border-color 0.1s;
+    }
+    .vds-checkbox.checked {
+      background: #0394ce; border-color: #0394ce;
+    }
+    .vds-checkbox.checked::after {
+      content: '';
+      display: block; width: 9px; height: 5px;
+      border-left: 2px solid white; border-bottom: 2px solid white;
+      transform: rotate(-45deg) translateY(-1px);
+    }
+    label:hover .vds-checkbox:not(.checked) { border-color: #0394ce; }
+
+    /* Info icon tooltip */
+    .info-icon-wrapper { position: relative; display: inline-flex; align-items: center; }
+    .info-tooltip {
+      display: none; position: fixed; width: 202px; z-index: 9999;
+      flex-direction: column; align-items: center; pointer-events: none;
+    }
+    .info-tooltip-body {
+      background: #01202f; color: white; font-family: 'Open Sans', sans-serif;
+      font-size: 14px; line-height: 1.4; border-radius: 4px; padding: 4px 8px 5px;
+      box-shadow: 0 0 1px rgba(9,30,66,0.48), 0 4px 16px rgba(9,30,66,0.24);
+      width: 100%;
+    }
+    .info-tooltip-arrow {
+      width: 0; height: 0;
+      border-left: 7px solid transparent; border-right: 7px solid transparent;
+      border-top: 6px solid #01202f;
+      align-self: flex-end; margin-right: 4px;
+    }
+  </style>
+
+  <script>
+    function toggleNeedsAttention(e) {
+      e.stopPropagation();
+      const menu = document.getElementById('needs-attention-menu');
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+    function toggleAllProviders(e) {
+      e.stopPropagation();
+      const menu = document.getElementById('all-providers-menu');
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+    document.addEventListener('click', function(e) {
+      const naWrapper = document.getElementById('needs-attention-wrapper');
+      if (naWrapper && !naWrapper.contains(e.target)) {
+        document.getElementById('needs-attention-menu').style.display = 'none';
+      }
+      const apWrapper = document.getElementById('all-providers-wrapper');
+      if (apWrapper && !apWrapper.contains(e.target)) {
+        document.getElementById('all-providers-menu').style.display = 'none';
+      }
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+      // Toggle checkbox state on label click
+      document.querySelectorAll('#needs-attention-menu label, #all-providers-menu label').forEach(function(label) {
+        label.addEventListener('click', function() {
+          const box = label.querySelector('.vds-checkbox');
+          box.classList.toggle('checked');
+        });
+      });
+
+      // Position info tooltip with fixed coords so it escapes overflow:hidden ancestors
+      const iconWrapper = document.querySelector('.info-icon-wrapper');
+      const tooltip = iconWrapper ? iconWrapper.querySelector('.info-tooltip') : null;
+      if (iconWrapper && tooltip) {
+        iconWrapper.addEventListener('mouseenter', function() {
+          tooltip.style.display = 'flex';
+          tooltip.style.visibility = 'hidden';
+          const rect = iconWrapper.getBoundingClientRect();
+          const ttH = tooltip.offsetHeight;
+          tooltip.style.left = (rect.right - 202) + 'px';
+          tooltip.style.top = (rect.top - ttH - 8) + 'px';
+          tooltip.style.visibility = 'visible';
+        });
+        iconWrapper.addEventListener('mouseleave', function() {
+          tooltip.style.display = 'none';
+        });
+      }
+    });
+  </script>
+
+
+  <!-- ═══ PA Dialog — Derek Fontaine ═══ -->
+  <div id="pa-dialog-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,24,38,0.45); z-index:500; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:4px; width:700px; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 0 1px rgba(9,30,66,0.96), 0 8px 24px rgba(9,30,66,0.4), 0 8px 48px rgba(9,30,66,0.24); overflow:hidden;">
+
+      <!-- Title row -->
+      <div style="padding:16px; display:flex; align-items:flex-start; gap:8px; flex-shrink:0;">
+        <p style="flex:1; font-size:20px; font-weight:600; color:#142125; line-height:1.4; font-family:'Open Sans',sans-serif;">Derek Fontaine - Humira 40mg/0.8mL injectable</p>
+        <button onclick="closePaDialog()" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; border:none; background:transparent; cursor:pointer; border-radius:4px; padding:6px; flex-shrink:0; margin-top:-2px;">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M15 5L5 15M5 5l10 10" stroke="#253a40" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <!-- Meta + Payer Questions label -->
+      <div style="border-bottom:1px solid #e4eaec; padding:0 16px 10px; flex-shrink:0;">
+        <div style="display:flex; gap:16px; margin-bottom:4px; flex-wrap:wrap;">
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Reference: <span style="color:#142125;">AUTH-2024-8834721</span></span>
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Date Initiated: <span style="color:#142125;">03/20/2026</span></span>
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Requesting Provider: <span style="color:#142125;">Beverly Crusher</span></span>
+        </div>
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:8px;">
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Insurance: <span style="color:#142125;">Aetna</span></span>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif;">Status:</span>
+            <span id="pa-status-badge" style="background:#fdf4be; color:#594f03; font-size:10px; font-weight:600; padding:2px 7.5px; border-radius:100px; font-family:'Open Sans',sans-serif; line-height:1;">Input Needed</span>
+          </div>
+        </div>
+        <p id="pa-questions-label" style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif;">Payer Questions:</p>
+      </div>
+
+      <div id="pa-questions-view" style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden;">
+      <!-- Scrollable questions -->
+      <div style="flex:1; overflow-y:auto; min-height:0;">
+
+        <!-- AI Pre-fill banner -->
+        <div style="padding:8px 16px;">
+          <div style="background:white; border:1px solid #59a0f8; border-radius:8px; padding:8px; display:flex; align-items:center; gap:24px;">
+            <div style="display:flex; align-items:flex-start; gap:6px; flex:1; min-width:0;">
+              <div style="flex-shrink:0; padding-top:2px;">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 0.5C7 3.99 4.49 6.5 1 6.5C4.49 6.5 7 9.01 7 12.5C7 9.01 9.51 6.5 13 6.5C9.51 6.5 7 3.99 7 0.5Z" fill="#296bbc"/></svg>
+              </div>
+              <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; line-height:1.6;">AI pre-filled this form based on available information. Click on the numbered citation to see its source. Always verify before submitting.</p>
+            </div>
+            <div style="display:flex; align-items:center; gap:9px; flex-shrink:0;">
+              <button style="background:transparent; border:none; cursor:pointer; font-size:11px; font-weight:600; color:#296bbc; font-family:'Open Sans',sans-serif; padding:4.5px 4px; border-radius:4px; white-space:nowrap;">Undo Pre-Fill</button>
+              <div style="width:1px; height:18px; background:#cdd7db;"></div>
+              <div style="display:flex; gap:4px; align-items:center;">
+                <button title="Thumbs down" style="background:transparent; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;">
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M10 2H6a.8.8 0 00-.73.47L3.1 6.6A.8.8 0 003 7v.8a.8.8 0 00.8.8H7L5.9 11.2a.65.65 0 00.59.93L10.5 8V3.5A1.5 1.5 0 009 2z" stroke="#8398a0" stroke-width="1.1" stroke-linejoin="round" fill="none"/><rect x="10.5" y="2" width="1.5" height="6" rx=".4" stroke="#8398a0" stroke-width="1.1" fill="none"/></svg>
+                </button>
+                <button title="Thumbs up" style="background:transparent; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;">
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M5 13H9a.8.8 0 00.73-.47L11.9 8.4A.8.8 0 0012 8v-.8a.8.8 0 00-.8-.8H8L9.1 3.8a.65.65 0 00-.59-.93L4.5 7v4.5A1.5 1.5 0 006 13z" stroke="#8398a0" stroke-width="1.1" stroke-linejoin="round" fill="none"/><rect x="3" y="7" width="1.5" height="6" rx=".4" stroke="#8398a0" stroke-width="1.1" fill="none"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Q1: Primary diagnosis -->
+        <div style="border-bottom:1px solid #e4eaec; padding:8px 24px 10px; display:flex; gap:8px;">
+          <span style="font-size:12px; color:rgba(0,24,38,0.58); padding-top:3px; flex-shrink:0; width:14px; font-family:'Open Sans',sans-serif;">1</span>
+          <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+            <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; line-height:1.6; margin:0;">What is the primary diagnosis requiring treatment with Humira?</p>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <div style="background:#e0f7ff; border:1px solid #cdd7db; border-radius:4px; height:34px; width:391px; display:flex; align-items:center; padding:0 8px; flex-shrink:0;">
+                <input style="font-size:14px; color:#142125; background:transparent; border:none; outline:none; width:100%; font-family:'Open Sans',sans-serif;" value="Rheumatoid Arthritis" />
+              </div>
+              <span style="background:#dbebff; color:#07479d; font-size:12px; font-weight:700; width:16px; height:16px; border-radius:2px; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; font-family:'Open Sans',sans-serif;" onclick="openCitePopover(event,1)">1</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Q2: DMARD radio -->
+        <div style="border-bottom:1px solid #e4eaec; padding:8px 24px 10px; display:flex; gap:8px;">
+          <span style="font-size:12px; color:rgba(0,24,38,0.58); padding-top:3px; flex-shrink:0; width:14px; font-family:'Open Sans',sans-serif;">2</span>
+          <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+            <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; line-height:1.6; margin:0;">Has the patient tried and failed at least one conventional DMARD (e.g. methotrexate) for a minimum of 3 months?</p>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px; color:#142125; font-family:'Open Sans',sans-serif; line-height:1.6; width:fit-content;">
+              <input type="radio" name="pa-q2" value="yes" style="width:16px; height:16px; accent-color:#0394ce; cursor:pointer; flex-shrink:0;" /> Yes
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px; color:#142125; font-family:'Open Sans',sans-serif; line-height:1.6; width:fit-content;">
+              <input type="radio" name="pa-q2" value="no" style="width:16px; height:16px; accent-color:#0394ce; cursor:pointer; flex-shrink:0;" /> No
+            </label>
+          </div>
+        </div>
+
+        <!-- Q3: Prior biologics -->
+        <div style="border-bottom:1px solid #e4eaec; padding:8px 24px 10px; display:flex; gap:8px;">
+          <span style="font-size:12px; color:rgba(0,24,38,0.58); padding-top:3px; flex-shrink:0; width:14px; font-family:'Open Sans',sans-serif;">3</span>
+          <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+            <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; line-height:1.6; margin:0;">List all prior biologic or targeted DMARDS trialed, including dates and reasons for discontinuation.</p>
+            <input style="background:white; border:1px solid #cdd7db; border-radius:4px; height:34px; width:391px; padding:0 8px; font-size:14px; color:#142125; font-family:'Open Sans',sans-serif; outline:none;" />
+          </div>
+        </div>
+
+        <!-- Q4: DAS28-CRP score -->
+        <div style="border-bottom:1px solid #e4eaec; padding:8px 24px 10px; display:flex; gap:8px;">
+          <span style="font-size:12px; color:rgba(0,24,38,0.58); padding-top:3px; flex-shrink:0; width:14px; font-family:'Open Sans',sans-serif;">4</span>
+          <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+            <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; line-height:1.6; margin:0;">What is the patient's most recent DAS28-CRP or CDAI score?</p>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <div style="background:#e0f7ff; border:1px solid #cdd7db; border-radius:4px; height:34px; width:391px; display:flex; align-items:center; padding:0 8px; flex-shrink:0;">
+                <input style="font-size:14px; color:#142125; background:transparent; border:none; outline:none; width:100%; font-family:'Open Sans',sans-serif;" value="DAS28-CRP: 5.2" />
+              </div>
+              <span style="background:#dbebff; color:#07479d; font-size:12px; font-weight:700; width:16px; height:16px; border-radius:2px; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; font-family:'Open Sans',sans-serif;" onclick="openCitePopover(event,2)">2</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Q5: TB/Hep B screening -->
+        <div style="border-bottom:1px solid #e4eaec; padding:8px 24px 10px; display:flex; gap:8px;">
+          <span style="font-size:12px; color:rgba(0,24,38,0.58); padding-top:3px; flex-shrink:0; width:14px; font-family:'Open Sans',sans-serif;">5</span>
+          <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+            <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; line-height:1.6; margin:0;">Has the patient been screened for latent tuberculosis and hepatitis B prior to initiating therapy?</p>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <div style="background:#e0f7ff; border:1px solid #cdd7db; border-radius:4px; height:34px; width:391px; display:flex; align-items:center; padding:0 8px; flex-shrink:0;">
+                <input style="font-size:14px; color:#142125; background:transparent; border:none; outline:none; width:100%; font-family:'Open Sans',sans-serif;" value="Yes, both negative" />
+              </div>
+              <span style="background:#dbebff; color:#07479d; font-size:12px; font-weight:700; width:16px; height:16px; border-radius:2px; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; font-family:'Open Sans',sans-serif;" onclick="openCitePopover(event,3)">3</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Q6: DAS28-CRP (repeat) -->
+        <div style="border-bottom:1px solid #e4eaec; padding:8px 24px 10px; display:flex; gap:8px;">
+          <span style="font-size:12px; color:rgba(0,24,38,0.58); padding-top:3px; flex-shrink:0; width:14px; font-family:'Open Sans',sans-serif;">6</span>
+          <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+            <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; line-height:1.6; margin:0;">What is the patient's most recent DAS28-CRP or CDAI score?</p>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <div style="background:#e0f7ff; border:1px solid #cdd7db; border-radius:4px; height:34px; width:391px; display:flex; align-items:center; padding:0 8px; flex-shrink:0;">
+                <input style="font-size:14px; color:#142125; background:transparent; border:none; outline:none; width:100%; font-family:'Open Sans',sans-serif;" value="DAS28-CRP: 5.2" />
+              </div>
+              <span style="background:#dbebff; color:#07479d; font-size:12px; font-weight:700; width:16px; height:16px; border-radius:2px; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; font-family:'Open Sans',sans-serif;" onclick="openCitePopover(event,4)">4</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Q7: Board-certified specialist -->
+        <div style="border-bottom:1px solid #e4eaec; padding:8px 24px 10px; display:flex; gap:8px;">
+          <span style="font-size:12px; color:rgba(0,24,38,0.58); padding-top:3px; flex-shrink:0; width:14px; font-family:'Open Sans',sans-serif;">7</span>
+          <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+            <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; line-height:1.6; margin:0;">Is the prescriber a board-certified rheumatologist or gastroenterologist?</p>
+            <input style="background:white; border:1px solid #cdd7db; border-radius:4px; height:34px; width:391px; padding:0 8px; font-size:14px; color:#142125; font-family:'Open Sans',sans-serif; outline:none;" />
+          </div>
+        </div>
+
+        <!-- Q8: Clinical justification -->
+        <div style="border-bottom:1px solid #e4eaec; padding:8px 24px 10px; display:flex; gap:8px;">
+          <span style="font-size:12px; color:rgba(0,24,38,0.58); padding-top:3px; flex-shrink:0; width:14px; font-family:'Open Sans',sans-serif;">8</span>
+          <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+            <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; line-height:1.6; margin:0;">Provide clinical justification if the patient does not meet standard step therapy requirements.</p>
+            <input style="background:white; border:1px solid #cdd7db; border-radius:4px; height:34px; width:391px; padding:0 8px; font-size:14px; color:#142125; font-family:'Open Sans',sans-serif; outline:none;" />
+          </div>
+        </div>
+
+      </div><!-- /scrollable questions -->
+
+      <!-- Footer -->
+      <div style="border-top:1px solid #e4eaec; padding:16px; display:flex; align-items:center; gap:8px; flex-shrink:0;">
+        <button onclick="showPaReview()" style="background:#0394ce; color:white; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Continue to Submission</button>
+        <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; display:flex; align-items:center; gap:4px; white-space:nowrap;">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 8v3.5a.5.5 0 01-.5.5h-8a.5.5 0 01-.5-.5v-8a.5.5 0 01.5-.5H6" stroke="#253a40" stroke-width="1.2" stroke-linecap="round"/><path d="M8.5 2H12v3.5M12 2L7 7" stroke="#253a40" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Open Patient Chart
+        </button>
+        <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Cancel Request</button>
+        <button onclick="closePaDialog()" style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Close</button>
+      </div>
+      </div><!-- /pa-questions-view -->
+
+      <!-- ── Review / submission view ── -->
+      <div id="pa-review-view" style="display:none; flex:1; min-height:0; flex-direction:column; overflow:hidden;">
+
+        <!-- Scrollable review body -->
+        <div style="flex:1; overflow-y:auto; min-height:0;">
+
+          <!-- Add Additional Notes -->
+          <div style="border-bottom:1px solid #e4eaec; padding:9px 16px;">
+            <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 8px;">Add Additional Notes</p>
+            <label style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; display:block; margin-bottom:4px;">Any additional context or notes for the payer (optional)</label>
+            <textarea style="width:100%; border:1px solid #cdd7db; border-radius:4px; height:77px; padding:8px; font-size:14px; color:#142125; font-family:'Open Sans',sans-serif; resize:none; outline:none;"></textarea>
+          </div>
+
+          <!-- Add Attachments -->
+          <div style="border-bottom:1px solid #e4eaec; padding:9px 16px;">
+            <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 8px;">Add Attachments</p>
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+              <div style="display:inline-flex; align-items:center; gap:5px; background:#ebf4ff; border:1px dashed #59a0f8; border-radius:4px; padding:4px 8px;">
+                <svg width="11" height="13" viewBox="0 0 11 13" fill="none"><path d="M6.5 1H2a1 1 0 00-1 1v9a1 1 0 001 1h7a1 1 0 001-1V4.5L6.5 1z" stroke="#59a0f8" stroke-width="1.1" stroke-linejoin="round"/><path d="M6.5 1v3.5H10" stroke="#59a0f8" stroke-width="1.1" stroke-linejoin="round"/><path d="M3 7h5M3 9h3" stroke="#59a0f8" stroke-width="0.9" stroke-linecap="round"/></svg>
+                <span style="font-size:11px; font-weight:600; color:#2c6fad; font-family:'Open Sans',sans-serif;">Rheumatology Consult - 02/10/2026</span>
+              </div>
+              <div style="display:inline-flex; align-items:center; gap:5px; background:#ebf4ff; border:1px dashed #59a0f8; border-radius:4px; padding:4px 8px;">
+                <svg width="11" height="13" viewBox="0 0 11 13" fill="none"><path d="M6.5 1H2a1 1 0 00-1 1v9a1 1 0 001 1h7a1 1 0 001-1V4.5L6.5 1z" stroke="#59a0f8" stroke-width="1.1" stroke-linejoin="round"/><path d="M6.5 1v3.5H10" stroke="#59a0f8" stroke-width="1.1" stroke-linejoin="round"/><path d="M3 7h5M3 9h3" stroke="#59a0f8" stroke-width="0.9" stroke-linecap="round"/></svg>
+                <span style="font-size:11px; font-weight:600; color:#2c6fad; font-family:'Open Sans',sans-serif;">Visit Note - 02/09/2026</span>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button style="background:#e4eaec; color:#253a40; font-size:12px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:24px; padding:0 10px; cursor:pointer; white-space:nowrap;">Select From Computer</button>
+              <button style="background:#e4eaec; color:#253a40; font-size:12px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:24px; padding:0 10px; cursor:pointer; white-space:nowrap;">Select From Patient Chart</button>
+            </div>
+          </div>
+
+          <!-- Question & Answer Review -->
+          <div style="padding:13px 16px;">
+            <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 10px;">Question &amp; Answer Review</p>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+
+              <div style="border:1px solid #e4eaec; border-radius:4px; padding:9px 17px;">
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                  <span style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; flex-shrink:0; min-width:14px; margin-top:2px;">1</span>
+                  <div><p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 3px;">What is the primary diagnosis requiring treatment with Humira?</p><p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.5; padding-left:4px;">Rheumatoid Arthritis</p></div>
+                </div>
+              </div>
+
+              <div style="border:1px solid #e4eaec; border-radius:4px; padding:9px 17px;">
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                  <span style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; flex-shrink:0; min-width:14px; margin-top:2px;">2</span>
+                  <div><p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 3px;">Has the patient tried and failed at least one conventional DMARD (e.g. methotrexate) for a minimum of 3 months?</p><p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.5; padding-left:4px;">Yes</p></div>
+                </div>
+              </div>
+
+              <div style="border:1px solid #e4eaec; border-radius:4px; padding:9px 17px;">
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                  <span style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; flex-shrink:0; min-width:14px; margin-top:2px;">3</span>
+                  <div><p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 3px;">List all prior biologic or targeted DMARDS trialed, including dates and reasons for discontinuation.</p><p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.5; padding-left:4px;">Adalimumab (Humira) TNF Inhibitor 01/2023 - 07/2023, Patient failed to achieve 20% improvement in ACR score (ACR20) after 6 months of therapy. Etanercept (Enbrel) TNF Inhibitor 08/2023 - 02/2024 Initial moderate response for 3 months, followed by a significant flare in DAS28-ESR (Disease Activity Score) of &gt; 5.1</p></div>
+                </div>
+              </div>
+
+              <div style="border:1px solid #e4eaec; border-radius:8px; padding:9px 17px;">
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                  <span style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; flex-shrink:0; min-width:14px; margin-top:2px;">4</span>
+                  <div><p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 3px;">What is the patient's most recent DAS28-CRP or CDAI score?</p><p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.5; padding-left:4px;">DAS28-CRP: 5.2</p></div>
+                </div>
+              </div>
+
+              <div style="border:1px solid #e4eaec; border-radius:8px; padding:9px 17px;">
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                  <span style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; flex-shrink:0; min-width:14px; margin-top:2px;">5</span>
+                  <div><p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 3px;">Has the patient been screened for latent tuberculosis and hepatitis B prior to initiating therapy?</p><p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.5; padding-left:4px;">Yes, both negative</p></div>
+                </div>
+              </div>
+
+              <div style="border:1px solid #e4eaec; border-radius:8px; padding:9px 17px;">
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                  <span style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; flex-shrink:0; min-width:14px; margin-top:2px;">6</span>
+                  <div><p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 3px;">What is the patient's most recent DAS28-CRP or CDAI score?</p><p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.5; padding-left:4px;">DAS28-CRP: 5.2</p></div>
+                </div>
+              </div>
+
+              <div style="border:1px solid #e4eaec; border-radius:8px; padding:9px 17px;">
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                  <span style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; flex-shrink:0; min-width:14px; margin-top:2px;">7</span>
+                  <div><p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 3px;">Is the prescriber a board-certified rheumatologist or gastroenterologist?</p><p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.5; padding-left:4px;">No</p></div>
+                </div>
+              </div>
+
+              <div style="border:1px solid #e4eaec; border-radius:8px; padding:9px 17px;">
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                  <span style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; flex-shrink:0; min-width:14px; margin-top:2px;">8</span>
+                  <div><p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 3px;">Provide clinical justification if the patient does not meet standard step therapy requirements.</p><p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.5; padding-left:4px;">The patient presents with highly aggressive, seropositive Rheumatoid Arthritis (RF+ and Anti-CCP &gt;250 U/mL) and has already demonstrated a class-wide failure of TNF inhibitors (Adalimumab and Etanercept). Continuing with a third TNF inhibitor (e.g., Infliximab) is clinically inappropriate and likely to result in further irreversible joint erosions, as evidenced by recent X-rays of the bilateral MCP joints showing new marginal erosions</p></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div><!-- /review scrollable body -->
+
+        <!-- Review footer -->
+        <div style="border-top:1px solid #e4eaec; padding:16px; display:flex; align-items:center; gap:8px; flex-shrink:0;">
+          <button onclick="showPaSubmitted()" style="background:#0394ce; color:white; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Submit to Payer</button>
+          <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; display:flex; align-items:center; gap:4px; white-space:nowrap;">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 8v3.5a.5.5 0 01-.5.5h-8a.5.5 0 01-.5-.5v-8a.5.5 0 01.5-.5H6" stroke="#253a40" stroke-width="1.2" stroke-linecap="round"/><path d="M8.5 2H12v3.5M12 2L7 7" stroke="#253a40" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Open Patient Chart
+          </button>
+          <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Cancel Request</button>
+          <button onclick="closePaDialog()" style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Close</button>
+        </div>
+
+      </div><!-- /pa-review-view -->
+
+      <!-- ── Pending Response view (post-submit) ── -->
+      <div id="pa-pending-view" style="display:none; flex:1; min-height:0; flex-direction:column; overflow:hidden;">
+
+        <div style="flex:1; overflow-y:auto; min-height:0;">
+        <div style="padding:12px 16px; display:flex; flex-direction:column; gap:12px;">
+
+          <!-- Confirmation text -->
+          <div>
+            <p style="font-size:14px; font-weight:600; color:#142125; font-family:'Open Sans',sans-serif; margin:0 0 2px; line-height:1.6;">Submitted Successfully to Aetna</p>
+            <p style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0; line-height:1.6;">The payer decision will appear on Practice Home and in the patient's chart.</p>
+          </div>
+
+          <!-- Submission summary -->
+          <div style="background:#f0f3f4; border-radius:4px; padding:12px 16px; display:flex; flex-direction:column; gap:6px;">
+            <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0; line-height:1.6; letter-spacing:0.04em;">SUBMISSION SUMMARY</p>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:12px; color:#253a40; font-family:'Open Sans',sans-serif;">Submitted</span>
+              <span style="font-size:12px; font-weight:600; color:#142125; font-family:'Open Sans',sans-serif;">May 5, 2026 at 10:30 AM</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:12px; color:#253a40; font-family:'Open Sans',sans-serif;">Questions Answered</span>
+              <span style="font-size:12px; font-weight:600; color:#142125; font-family:'Open Sans',sans-serif;">8 of 8</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:12px; color:#253a40; font-family:'Open Sans',sans-serif;">Attachments</span>
+              <span style="font-size:12px; font-weight:600; color:#142125; font-family:'Open Sans',sans-serif;">2 documents</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:12px; color:#253a40; font-family:'Open Sans',sans-serif;">Expected Resolution Date</span>
+              <span style="font-size:12px; font-weight:600; color:#142125; font-family:'Open Sans',sans-serif;">May 19, 2026</span>
+            </div>
+          </div>
+
+          <!-- View Submitted Details accordion -->
+          <div style="border:1px solid #e4eaec; border-radius:4px; overflow:hidden;">
+            <button onclick="togglePaSubmittedDetails()" style="width:100%; background:#f0f3f4; border:none; cursor:pointer; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; border-radius:4px; font-family:'Open Sans',sans-serif;">
+              <span style="font-size:12px; font-weight:600; color:#253a40;">View Submitted Details</span>
+              <svg id="pa-submitted-chevron" width="12" height="8" viewBox="0 0 12 8" fill="none" style="transition:transform 0.2s;"><path d="M1 1.5l5 5 5-5" stroke="#253a40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div id="pa-submitted-details-body" style="display:none; border-top:1px solid #e4eaec; background:white;"></div>
+          </div>
+
+        </div><!-- /inner layout -->
+        </div><!-- /body -->
+
+        <!-- Footer -->
+        <div style="border-top:1px solid #e4eaec; padding:16px; display:flex; align-items:center; gap:8px; flex-shrink:0;">
+          <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; display:flex; align-items:center; gap:4px; white-space:nowrap;">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 8v3.5a.5.5 0 01-.5.5h-8a.5.5 0 01-.5-.5v-8a.5.5 0 01.5-.5H6" stroke="#253a40" stroke-width="1.2" stroke-linecap="round"/><path d="M8.5 2H12v3.5M12 2L7 7" stroke="#253a40" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Open Patient Chart
+          </button>
+          <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Cancel Request</button>
+          <button onclick="closePaDialog()" style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Close</button>
+        </div>
+
+      </div><!-- /pa-pending-view -->
+
+    </div>
+  </div>
+
+  <!-- ═══ Denial Dialog — Margaret Holloway ═══ -->
+  <div id="denial-dialog-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,24,38,0.45); z-index:500; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:4px; width:700px; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 0 1px rgba(9,30,66,0.96), 0 8px 24px rgba(9,30,66,0.4), 0 8px 48px rgba(9,30,66,0.24); overflow:hidden;">
+
+      <!-- Title row -->
+      <div style="padding:16px; display:flex; align-items:flex-start; gap:8px; flex-shrink:0;">
+        <p style="flex:1; font-size:20px; font-weight:600; color:#142125; line-height:1.4; font-family:'Open Sans',sans-serif;">Margaret Holloway - Lisdexamfetamine (Vyvanse) 50mg</p>
+        <button onclick="closeDenialDialog()" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; border:none; background:transparent; cursor:pointer; border-radius:4px; flex-shrink:0; margin-top:-2px;">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M15 5L5 15M5 5l10 10" stroke="#253a40" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <!-- Meta + Payer Response label -->
+      <div style="border-bottom:1px solid #e4eaec; padding:0 16px 10px; flex-shrink:0;">
+        <div style="display:flex; gap:16px; margin-bottom:4px; flex-wrap:wrap;">
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Reference: <span style="color:#142125;">AUTH-2024-8834721</span></span>
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Date Initiated: <span style="color:#142125;">02/28/2026</span></span>
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Requesting Provider: <span style="color:#142125;">Staff One</span></span>
+        </div>
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:8px;">
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Insurance: <span style="color:#142125;">Aetna</span></span>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif;">Status:</span>
+            <span style="background:#fee1e5; color:#ac0116; font-size:10px; font-weight:600; padding:2px 7.5px; border-radius:100px; font-family:'Open Sans',sans-serif; line-height:1;">Denied</span>
+          </div>
+        </div>
+        <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif;">Payer Response:</p>
+      </div>
+
+      <!-- Scrollable content -->
+      <div style="flex:1; overflow-y:auto; min-height:0;">
+      <div style="padding:12px 16px; display:flex; flex-direction:column; gap:12px;">
+
+        <!-- Yellow denial marquee banner -->
+        <div style="background:#fdf4be; border-radius:8px; padding:12px 16px;">
+          <p style="font-size:14px; font-weight:600; color:#594f03; font-family:'Open Sans',sans-serif; line-height:1.6; margin:0 0 2px;">Prior Authorization Denied by Aetna</p>
+          <p style="font-size:12px; color:#594f03; font-family:'Open Sans',sans-serif; line-height:1.6; opacity:0.88; margin:0;">Denied on March 10, 2026 · Reference: DEN-2026-44291</p>
+        </div>
+
+        <!-- Denial Details card -->
+        <div style="border:1px solid #e4eaec; border-radius:4px; overflow:hidden;">
+          <div style="padding:12px 16px 11px; border-bottom:1px solid #e4eaec;">
+            <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0;">Denial Details</p>
+          </div>
+          <div style="padding:12px 16px; display:flex; flex-direction:column; gap:12px;">
+
+            <!-- Reason -->
+            <div>
+              <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 2px; line-height:1.6;">Reason</p>
+              <p style="font-size:14px; color:#142125; font-family:'Open Sans',sans-serif; margin:0; line-height:1.6;">Step therapy requirement not met</p>
+            </div>
+
+            <!-- Payer Notes -->
+            <div>
+              <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 2px; line-height:1.6;">Payer Notes</p>
+              <p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.6;">Patient has not demonstrated an adequate trial and failure of a preferred first-line stimulant medication (e.g., methylphenidate or amphetamine salts). Aetna requires documentation of at least two preferred ADHD medications tried and failed before approving Lisdexamfetamine (Vyvanse).</p>
+            </div>
+
+            <!-- Reviewed By + Appeal Deadline -->
+            <div style="display:flex; gap:24px;">
+              <div>
+                <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 2px; line-height:1.6;">Reviewed By</p>
+                <p style="font-size:14px; color:#142125; font-family:'Open Sans',sans-serif; margin:0; line-height:1.6;">Dr. Sarah Mitchell, PharmD</p>
+              </div>
+              <div>
+                <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 2px; line-height:1.6;">Appeal Deadline</p>
+                <p style="font-size:14px; color:#142125; font-family:'Open Sans',sans-serif; margin:0; line-height:1.6;">April 9, 2026</p>
+              </div>
+            </div>
+
+            <!-- Next Steps -->
+            <div>
+              <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 2px; line-height:1.6;">Next Steps</p>
+              <p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.6;">You may file an appeal within 30 days if you believe this denial should be reconsidered. If you do not intend to appeal, acknowledge the denial to remove this request from your action items.</p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- View Submitted Details accordion -->
+        <div style="border:1px solid #e4eaec; border-radius:4px; overflow:hidden;">
+          <button onclick="toggleSubmittedDetails()" style="width:100%; background:#f0f3f4; border:none; cursor:pointer; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; border-radius:4px; font-family:'Open Sans',sans-serif;">
+            <span style="font-size:12px; font-weight:600; color:#253a40;">View Submitted Details</span>
+            <svg id="submitted-chevron" width="12" height="8" viewBox="0 0 12 8" fill="none" style="transition:transform 0.2s;"><path d="M1 1.5l5 5 5-5" stroke="#253a40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div id="submitted-details-body" style="display:none; border-top:1px solid #e4eaec; background:white;">
+            <div style="padding:12px; display:flex; flex-direction:column; gap:8px;">
+              <!-- Notes & Attachments -->
+              <div style="border:1px solid #e4eaec; border-radius:8px; padding:9px 17px;">
+                <p style="font-size:14px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 7px;">Additional Notes &amp; Attachments</p>
+                <p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 5px;">Notes: n/a</p>
+                <p style="font-size:14px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 5px;">Attachments:</p>
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                  <div style="display:inline-flex; align-items:center; gap:5px; background:#f9fafb; border:1px solid #e4eaec; border-radius:4px; padding:4px 8px; align-self:flex-start;">
+                    <svg width="11" height="13" viewBox="0 0 11 13" fill="none"><path d="M6.5 1H2a1 1 0 00-1 1v9a1 1 0 001 1h7a1 1 0 001-1V4.5L6.5 1z" stroke="rgba(0,24,38,0.58)" stroke-width="1.1" stroke-linejoin="round"/><path d="M6.5 1v3.5H10" stroke="rgba(0,24,38,0.58)" stroke-width="1.1" stroke-linejoin="round"/><path d="M3 7h5M3 9h3" stroke="rgba(0,24,38,0.58)" stroke-width="0.9" stroke-linecap="round"/></svg>
+                    <span style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif;">ADHD Assessment - 01/15/2026.pdf</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Q&A rows -->
+              <div style="border:1px solid #e4eaec; border-radius:8px; padding:9px 17px;"><div style="display:flex; gap:10px; align-items:flex-start;"><span style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; flex-shrink:0; min-width:14px; margin-top:2px;">1</span><div><p style="font-size:14px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 3px;">Primary diagnosis for this PA request?</p><p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.5; padding-left:4px;">Attention Deficit Hyperactivity Disorder, Combined Type (F90.2)</p></div></div></div>
+              <div style="border:1px solid #e4eaec; border-radius:8px; padding:9px 17px;"><div style="display:flex; gap:10px; align-items:flex-start;"><span style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; flex-shrink:0; min-width:14px; margin-top:2px;">2</span><div><p style="font-size:14px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 3px;">Patient age and weight?</p><p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.5; padding-left:4px;">68 years old, 134 lbs (60.8 kg)</p></div></div></div>
+              <div style="border:1px solid #e4eaec; border-radius:8px; padding:9px 17px;"><div style="display:flex; gap:10px; align-items:flex-start;"><span style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; flex-shrink:0; min-width:14px; margin-top:2px;">3</span><div><p style="font-size:14px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 3px;">Has the patient previously trialed methylphenidate (e.g., Ritalin, Concerta)?</p><p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.5; padding-left:4px;">No prior trial of methylphenidate documented</p></div></div></div>
+              <div style="border:1px solid #e4eaec; border-radius:8px; padding:9px 17px;"><div style="display:flex; gap:10px; align-items:flex-start;"><span style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; flex-shrink:0; min-width:14px; margin-top:2px;">4</span><div><p style="font-size:14px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 3px;">Has the patient previously trialed mixed amphetamine salts (e.g., Adderall, Mydayis)?</p><p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.5; padding-left:4px;">No prior trial of amphetamine salts documented</p></div></div></div>
+              <div style="border:1px solid #e4eaec; border-radius:8px; padding:9px 17px;"><div style="display:flex; gap:10px; align-items:flex-start;"><span style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; flex-shrink:0; min-width:14px; margin-top:2px;">5</span><div><p style="font-size:14px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 3px;">Clinical justification for initiating Lisdexamfetamine (Vyvanse) as first-line stimulant?</p><p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.5; padding-left:4px;">Patient has cardiovascular comorbidities including controlled hypertension. Prescriber recommends Vyvanse due to smoother onset/offset and lower cardiovascular impact relative to immediate-release stimulants. Newly diagnosed adult ADHD requiring consistent, long-acting coverage.</p></div></div></div>
+              <div style="border:1px solid #e4eaec; border-radius:8px; padding:9px 17px;"><div style="display:flex; gap:10px; align-items:flex-start;"><span style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; flex-shrink:0; min-width:14px; margin-top:2px;">6</span><div><p style="font-size:14px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 3px;">Is this a new diagnosis or continuation of prior treatment?</p><p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.5; padding-left:4px;">Newly diagnosed in January 2026 following psychiatric evaluation. No prior stimulant therapy.</p></div></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /inner layout -->
+      </div><!-- /scrollable content -->
+
+      <!-- Footer -->
+      <div style="border-top:1px solid #e4eaec; padding:16px; display:flex; align-items:center; gap:8px; flex-shrink:0; flex-wrap:wrap;">
+        <button onclick="openAppealFromDenial()" style="background:#0394ce; color:white; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Start Appeal</button>
+        <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Acknowledge Denial</button>
+        <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Contact Pt</button>
+        <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; display:flex; align-items:center; gap:4px; white-space:nowrap;">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 8v3a.5.5 0 01-.5.5h-8a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5H6" stroke="#253a40" stroke-width="1.2" stroke-linecap="round"/><path d="M8.5 2H12v3.5M12 2L7 7" stroke="#253a40" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Open Pt Chart
+        </button>
+        <button onclick="closeDenialDialog()" style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Close</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ Pending Response Dialog ═══ -->
+  <div id="pending-dialog-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,24,38,0.45); z-index:500; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:4px; width:700px; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 0 1px rgba(9,30,66,0.96), 0 8px 24px rgba(9,30,66,0.4), 0 8px 48px rgba(9,30,66,0.24); overflow:hidden;">
+
+      <!-- Title row -->
+      <div style="padding:16px; display:flex; align-items:flex-start; gap:8px; flex-shrink:0;">
+        <p id="pending-title" style="flex:1; font-size:20px; font-weight:600; color:#142125; line-height:1.4; font-family:'Open Sans',sans-serif;"></p>
+        <button onclick="closePendingDialog()" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; border:none; background:transparent; cursor:pointer; border-radius:4px; flex-shrink:0; margin-top:-2px;">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M15 5L5 15M5 5l10 10" stroke="#253a40" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <!-- Meta row -->
+      <div style="border-bottom:1px solid #e4eaec; padding:0 16px 12px; flex-shrink:0;">
+        <div style="display:flex; gap:16px; margin-bottom:4px; flex-wrap:wrap;">
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Reference: <span id="pending-ref" style="color:#142125;"></span></span>
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Date Initiated: <span id="pending-date" style="color:#142125;"></span></span>
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Requesting Provider: <span id="pending-provider" style="color:#142125;"></span></span>
+        </div>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Insurance: <span id="pending-insurance" style="color:#142125;"></span></span>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif;">Status:</span>
+            <span style="background:#e4eaec; color:#253a40; font-size:10px; font-weight:600; padding:2px 7.5px; border-radius:100px; font-family:'Open Sans',sans-serif; line-height:1;">Pending Response</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div style="flex:1; overflow-y:auto; min-height:0;">
+      <div style="padding:12px 16px; display:flex; flex-direction:column; gap:12px;">
+
+        <!-- Confirmation text -->
+        <div>
+          <p id="pending-submitted-to" style="font-size:14px; font-weight:600; color:#142125; font-family:'Open Sans',sans-serif; margin:0 0 2px; line-height:1.6;"></p>
+          <p style="font-size:12px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0; line-height:1.6;">The payer decision will appear on Practice Home and in the patient's chart.</p>
+        </div>
+
+        <!-- Submission Summary box -->
+        <div style="background:#f0f3f4; border-radius:4px; padding:12px 16px; display:flex; flex-direction:column; gap:6px;">
+          <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0; line-height:1.6; letter-spacing:0.04em;">SUBMISSION SUMMARY</p>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; color:#253a40; font-family:'Open Sans',sans-serif;">Submitted</span>
+            <span id="pending-submitted-at" style="font-size:12px; font-weight:600; color:#142125; font-family:'Open Sans',sans-serif;"></span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; color:#253a40; font-family:'Open Sans',sans-serif;">Questions Answered</span>
+            <span id="pending-questions" style="font-size:12px; font-weight:600; color:#142125; font-family:'Open Sans',sans-serif;"></span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; color:#253a40; font-family:'Open Sans',sans-serif;">Attachments</span>
+            <span id="pending-attachments" style="font-size:12px; font-weight:600; color:#142125; font-family:'Open Sans',sans-serif;"></span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; color:#253a40; font-family:'Open Sans',sans-serif;">Expected Resolution Date</span>
+            <span id="pending-resolution" style="font-size:12px; font-weight:600; color:#142125; font-family:'Open Sans',sans-serif;"></span>
+          </div>
+        </div>
+
+        <!-- View Submitted Details accordion -->
+        <div style="border:1px solid #e4eaec; border-radius:4px; overflow:hidden;">
+          <button onclick="togglePendingDetails()" style="width:100%; background:#f0f3f4; border:none; cursor:pointer; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; border-radius:4px; font-family:'Open Sans',sans-serif;">
+            <span style="font-size:12px; font-weight:600; color:#253a40;">View Submitted Details</span>
+            <svg id="pending-chevron" width="12" height="8" viewBox="0 0 12 8" fill="none" style="transition:transform 0.2s;"><path d="M1 1.5l5 5 5-5" stroke="#253a40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div id="pending-details-body" style="display:none; border-top:1px solid #e4eaec; background:white;"></div>
+        </div>
+
+      </div><!-- /inner layout -->
+      </div><!-- /body -->
+
+      <!-- Footer -->
+      <div style="border-top:1px solid #e4eaec; padding:16px; display:flex; align-items:center; gap:8px; flex-shrink:0;">
+        <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; display:flex; align-items:center; gap:4px; white-space:nowrap;">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 8v3a.5.5 0 01-.5.5h-8a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5H6" stroke="#253a40" stroke-width="1.2" stroke-linecap="round"/><path d="M8.5 2H12v3.5M12 2L7 7" stroke="#253a40" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Open Patient Chart
+        </button>
+        <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Cancel Request</button>
+        <button onclick="closePendingDialog()" style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Close</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ Approval Dialog ═══ -->
+  <div id="approval-dialog-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,24,38,0.45); z-index:500; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:4px; width:700px; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 0 1px rgba(9,30,66,0.96), 0 8px 24px rgba(9,30,66,0.4), 0 8px 48px rgba(9,30,66,0.24); overflow:hidden;">
+
+      <!-- Title row -->
+      <div style="padding:16px; display:flex; align-items:flex-start; gap:8px; flex-shrink:0;">
+        <p id="approval-title" style="flex:1; font-size:20px; font-weight:600; color:#142125; line-height:1.4; font-family:'Open Sans',sans-serif;"></p>
+        <button onclick="closeApprovalDialog()" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; border:none; background:transparent; cursor:pointer; border-radius:4px; flex-shrink:0; margin-top:-2px;">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M15 5L5 15M5 5l10 10" stroke="#253a40" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <!-- Meta row -->
+      <div style="border-bottom:1px solid #e4eaec; padding:0 16px 12px; flex-shrink:0;">
+        <div style="display:flex; gap:16px; margin-bottom:4px; flex-wrap:wrap;">
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Reference: <span id="approval-ref" style="color:#142125;"></span></span>
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Date Initiated: <span id="approval-date" style="color:#142125;"></span></span>
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Requesting Provider: <span id="approval-provider" style="color:#142125;"></span></span>
+        </div>
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:8px;">
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Insurance: <span id="approval-insurance" style="color:#142125;"></span></span>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif;">Status:</span>
+            <span style="background:#c5f1cf; color:#176325; font-size:10px; font-weight:600; padding:2px 7.5px; border-radius:100px; font-family:'Open Sans',sans-serif; line-height:1;">Approved</span>
+          </div>
+        </div>
+        <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0;">Payer Response:</p>
+      </div>
+
+      <!-- Body -->
+      <div style="flex:1; overflow-y:auto; min-height:0;">
+      <div style="padding:12px 16px; display:flex; flex-direction:column; gap:12px;">
+
+        <!-- Green marquee -->
+        <div style="background:#c5f1cf; border-radius:8px; padding:12px 16px;">
+          <p id="approval-marquee-title" style="font-size:14px; font-weight:600; color:#176325; font-family:'Open Sans',sans-serif; margin:0 0 2px; line-height:1.6;"></p>
+          <p id="approval-marquee-sub" style="font-size:12px; color:#176325; font-family:'Open Sans',sans-serif; margin:0; line-height:1.6; opacity:0.88;"></p>
+        </div>
+
+        <!-- Approval Details card -->
+        <div style="border:1px solid #e4eaec; border-radius:4px; overflow:hidden;">
+          <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; padding:12px 16px 0;">Approval Details</p>
+          <div style="padding:8px 16px 16px; display:flex; flex-direction:column; gap:12px;">
+            <!-- Dates row -->
+            <div style="display:flex; gap:24px;">
+              <div>
+                <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 2px;">Effective Date</p>
+                <p id="approval-effective" style="font-size:14px; color:#142125; font-family:'Open Sans',sans-serif; margin:0;"></p>
+              </div>
+              <div>
+                <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 2px;">Expiration Date</p>
+                <p id="approval-expiration" style="font-size:14px; color:#142125; font-family:'Open Sans',sans-serif; margin:0;"></p>
+              </div>
+            </div>
+            <!-- Payer Notes -->
+            <div>
+              <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 2px;">Payer Notes</p>
+              <p id="approval-notes" style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.6;"></p>
+            </div>
+            <!-- Next Steps -->
+            <div>
+              <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 2px;">Next Steps</p>
+              <p id="approval-next-steps" style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.6;"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- View Submitted Details accordion -->
+        <div style="border:1px solid #e4eaec; border-radius:4px; overflow:hidden;">
+          <button onclick="toggleApprovalDetails()" style="width:100%; background:#f0f3f4; border:none; cursor:pointer; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; border-radius:4px; font-family:'Open Sans',sans-serif;">
+            <span style="font-size:12px; font-weight:600; color:#253a40;">View Submitted Details</span>
+            <svg id="approval-chevron" width="12" height="8" viewBox="0 0 12 8" fill="none" style="transition:transform 0.2s;"><path d="M1 1.5l5 5 5-5" stroke="#253a40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div id="approval-details-body" style="display:none; border-top:1px solid #e4eaec; background:white;"></div>
+        </div>
+
+      </div><!-- /inner layout -->
+      </div><!-- /body -->
+
+      <!-- Footer -->
+      <div style="border-top:1px solid #e4eaec; padding:16px; display:flex; align-items:center; gap:8px; flex-shrink:0;">
+        <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Acknowledge Approval</button>
+        <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Contact Pt</button>
+        <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; display:flex; align-items:center; gap:4px; white-space:nowrap;">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 8v3a.5.5 0 01-.5.5h-8a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5H6" stroke="#253a40" stroke-width="1.2" stroke-linecap="round"/><path d="M8.5 2H12v3.5M12 2L7 7" stroke="#253a40" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Open Pt Chart
+        </button>
+        <button onclick="closeApprovalDialog()" style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Close</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ Appeal Dialog ═══ -->
+  <div id="appeal-dialog-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,24,38,0.45); z-index:500; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:4px; width:860px; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 0 1px rgba(9,30,66,0.96), 0 8px 24px rgba(9,30,66,0.4), 0 8px 48px rgba(9,30,66,0.24); overflow:hidden;">
+
+      <!-- Title row -->
+      <div style="padding:16px; display:flex; align-items:flex-start; gap:8px; flex-shrink:0;">
+        <p id="appeal-title" style="flex:1; font-size:20px; font-weight:600; color:#142125; line-height:1.4; font-family:'Open Sans',sans-serif;"></p>
+        <button onclick="closeAppealDialog()" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; border:none; background:transparent; cursor:pointer; border-radius:4px; flex-shrink:0; margin-top:-2px;">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M15 5L5 15M5 5l10 10" stroke="#253a40" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <!-- Meta row -->
+      <div style="border-bottom:1px solid #e4eaec; padding:0 16px 12px; flex-shrink:0;">
+        <div style="display:flex; gap:16px; margin-bottom:4px; flex-wrap:wrap;">
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Reference: <span id="appeal-ref" style="color:#142125;"></span></span>
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Date Initiated: <span id="appeal-date" style="color:#142125;"></span></span>
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Requesting Provider: <span id="appeal-provider" style="color:#142125;"></span></span>
+        </div>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; white-space:nowrap;">Insurance: <span id="appeal-insurance" style="color:#142125;"></span></span>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif;">Status:</span>
+            <span style="background:#fdf4be; color:#594f03; font-size:10px; font-weight:600; padding:2px 7.5px; border-radius:100px; font-family:'Open Sans',sans-serif; line-height:1;">Appeal Input Needed</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Two-column body -->
+      <div style="flex:1; min-height:0; display:flex; overflow:hidden;">
+
+        <!-- Left column: forms -->
+        <div style="flex:1; min-width:0; overflow-y:auto; padding:12px 16px 16px;">
+
+          <!-- Clinical Justification -->
+          <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 5px;">Clinical Justification for Appeal</p>
+          <p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; line-height:1.6; margin:0 0 10px;">Provide clinical justification and supporting documents to dispute this denial. Appeals must be submitted by <strong id="appeal-deadline-text"></strong>.</p>
+
+          <!-- Wordsmith widget -->
+          <div style="border-radius:4px; overflow:hidden; margin-bottom:18px;">
+            <!-- Top: manual textarea area -->
+            <div style="background:#f5f9ff; border:1px solid #cdd7db; border-bottom:none; border-radius:4px 4px 0 0; padding:8px 10px 10px; min-height:85px;">
+              <p style="font-size:12px; font-style:italic; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0; line-height:1.4;">Add context for the payer manually here or save time with Wordsmith</p>
+            </div>
+            <!-- Bottom: AI bar -->
+            <div style="border:1px solid #cdd7db; border-radius:0 0 4px 4px; padding:8px; display:flex; flex-direction:column; gap:7px;">
+              <!-- AI prompt input -->
+              <div style="border:1px solid #cdd7db; border-radius:4px; padding:8px 10px; display:flex; align-items:center; gap:6px; background:white;">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;">
+                  <path d="M8 1.5l1.1 3.4L12.5 6l-3.4 1.1L8 10.5l-1.1-3.4L3.5 6l3.4-1.1z" fill="#59a0f8"/>
+                  <path d="M13 1l.55 1.7 1.7.55-1.7.55L13 5.5l-.55-1.7-1.7-.55 1.7-.55z" fill="#59a0f8"/>
+                </svg>
+                <span style="font-size:12px; font-style:italic; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; line-height:1.6;">Describe what you need. We'll draft it using this patient's context</span>
+              </div>
+              <!-- Info / Personalize / Create row -->
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:5px;">
+                  <svg width="17" height="17" viewBox="0 0 17 17" fill="none" style="flex-shrink:0;"><circle cx="8.5" cy="8.5" r="7.5" stroke="#657981" stroke-width="1.1"/><path d="M8.5 7.5v4.5M8.5 5.5v.5" stroke="#657981" stroke-width="1.2" stroke-linecap="round"/></svg>
+                  <div style="width:1px; height:14px; background:#b9c6cb;"></div>
+                  <button style="background:transparent; border:none; cursor:pointer; color:#296bbc; font-size:11px; font-weight:600; font-family:'Open Sans',sans-serif; padding:2px 4px;">Personalize</button>
+                </div>
+                <button style="background:linear-gradient(167deg, #59a0f8 2%, #0a59c2 91%); border:none; border-radius:4px; color:white; font-size:11px; font-weight:600; font-family:'Open Sans',sans-serif; padding:4px 8px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" style="flex-shrink:0;"><path d="M5.5 1l.85 2.65L9 5.5l-2.65.85L5.5 9l-.85-2.65L2 5.5l2.65-.85z" fill="white"/></svg>
+                  Create
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add Attachments -->
+          <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 8px;">Add Attachments</p>
+          <div id="appeal-chips" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+          <div style="display:flex; gap:12px; margin-bottom:18px;">
+            <button style="background:#e4eaec; color:#253a40; font-size:12px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:24px; padding:0 8px; cursor:pointer; display:flex; align-items:center; gap:5px;">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 10V3M4 6l3-3 3 3M2 12h10" stroke="#253a40" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Select From Computer
+            </button>
+            <button style="background:#e4eaec; color:#253a40; font-size:12px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:24px; padding:0 8px; cursor:pointer; display:flex; align-items:center; gap:5px;">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1H3a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5L7 1z" stroke="#253a40" stroke-width="1.2" stroke-linejoin="round"/><path d="M7 1v4h4" stroke="#253a40" stroke-width="1.2" stroke-linejoin="round"/><path d="M4 8h6M4 10.5h3.5" stroke="#253a40" stroke-width="1" stroke-linecap="round"/></svg>
+              Select From Patient Chart
+            </button>
+          </div>
+
+          <!-- Request Additional Information -->
+          <p style="font-size:14px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0 0 5px;">Request Additional Information</p>
+          <p style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; line-height:1.6; margin:0 0 8px;">If additional information is needed from the payer, specify below.</p>
+          <div style="border:1px solid #cdd7db; border-radius:4px; height:62px; padding:8px 10px; font-size:14px; font-style:italic; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; line-height:1.4;">&nbsp;</div>
+
+        </div><!-- /left col -->
+
+        <!-- Right column: denial details + submitted details -->
+        <div style="width:284px; flex-shrink:0; border-left:1px solid #e4eaec; overflow-y:auto;">
+        <div style="padding:12px 16px; display:flex; flex-direction:column; gap:12px;">
+
+          <!-- Denial Details card -->
+          <div style="border:1px solid #e4eaec; border-radius:4px; overflow:hidden;">
+            <div style="background:#f0f3f4; border-bottom:1px solid #e4eaec; padding:9px 16px;">
+              <p style="font-size:12px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif; margin:0;">Denial Details</p>
+            </div>
+            <div style="padding:16px; display:flex; flex-direction:column; gap:20px;">
+              <div>
+                <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 3px;">Reason</p>
+                <p id="appeal-denial-reason" style="font-size:14px; color:#142125; font-family:'Open Sans',sans-serif; margin:0; line-height:1.6;"></p>
+              </div>
+              <div>
+                <p style="font-size:11px; font-weight:600; color:#6d7b83; font-family:'Open Sans',sans-serif; margin:0 0 3px;">Payer Notes</p>
+                <p id="appeal-denial-notes" style="font-size:14px; color:#253a40; font-family:'Open Sans',sans-serif; margin:0; line-height:1.6;"></p>
+              </div>
+              <div>
+                <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 3px;">Reviewed By</p>
+                <p id="appeal-denial-reviewer" style="font-size:14px; color:#142125; font-family:'Open Sans',sans-serif; margin:0; line-height:1.6;"></p>
+              </div>
+              <div>
+                <p style="font-size:11px; font-weight:600; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; margin:0 0 3px;">Appeal Deadline</p>
+                <p id="appeal-denial-deadline" style="font-size:14px; font-weight:600; color:#142125; font-family:'Open Sans',sans-serif; margin:0; line-height:1.6;"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- View Submitted Details accordion -->
+          <div style="border:1px solid #e4eaec; border-radius:4px; overflow:hidden;">
+            <button onclick="toggleAppealSubmitted()" style="width:100%; background:#f0f3f4; border:none; cursor:pointer; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; border-radius:4px; font-family:'Open Sans',sans-serif;">
+              <span style="font-size:12px; font-weight:600; color:#253a40;">View Submitted Details</span>
+              <svg id="appeal-submitted-chevron" width="12" height="8" viewBox="0 0 12 8" fill="none" style="transition:transform 0.2s;"><path d="M1 1.5l5 5 5-5" stroke="#253a40" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div id="appeal-submitted-body" style="display:none; border-top:1px solid #e4eaec; background:white;"></div>
+          </div>
+
+        </div><!-- /inner layout -->
+        </div><!-- /right col -->
+
+      </div><!-- /two-column body -->
+
+      <!-- Footer -->
+      <div style="border-top:1px solid #e4eaec; padding:16px; display:flex; align-items:center; gap:8px; flex-shrink:0;">
+        <button style="background:#0394ce; color:white; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Submit Appeal</button>
+        <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Acknowledge Denial</button>
+        <button style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; display:flex; align-items:center; gap:4px; white-space:nowrap;">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 8v3a.5.5 0 01-.5.5h-8a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5H6" stroke="#253a40" stroke-width="1.2" stroke-linecap="round"/><path d="M8.5 2H12v3.5M12 2L7 7" stroke="#253a40" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Open Patient Chart
+        </button>
+        <button onclick="closeAppealDialog()" style="background:#e4eaec; color:#253a40; font-size:14px; font-weight:600; font-family:'Open Sans',sans-serif; border:none; border-radius:4px; height:32px; padding:0 12px; cursor:pointer; white-space:nowrap;">Close</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ Citation Popover ═══ -->
+  <div id="cite-popover" style="display:none; position:fixed; z-index:700; width:230px; pointer-events:auto; filter:drop-shadow(0 0 0.5px rgba(9,30,66,0.48)) drop-shadow(0 4px 8px rgba(9,30,66,0.16));">
+    <div style="background:white; border-radius:4px; padding:8px;">
+      <!-- Header -->
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+        <div style="display:flex; align-items:center; gap:3px;">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <path d="M7.5 1H3a1 1 0 00-1 1v9a1 1 0 001 1h7a1 1 0 001-1V4.5L7.5 1z" stroke="#142125" stroke-width="1.1" stroke-linejoin="round"/>
+            <path d="M7.5 1v3.5H11" stroke="#142125" stroke-width="1.1" stroke-linejoin="round"/>
+          </svg>
+          <span style="font-size:13px; font-weight:600; color:#142125; font-family:'Open Sans',sans-serif; line-height:1.4;">Source</span>
+        </div>
+        <button onclick="closeCitePopover()" style="background:transparent; border:none; cursor:pointer; padding:4px; border-radius:4px; display:flex; align-items:center; justify-content:center; line-height:1;">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 3L3 11M3 3l8 8" stroke="#253a40" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <!-- Body -->
+      <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:8px;">
+        <p id="cite-date" style="font-size:11px; color:rgba(0,24,38,0.58); font-family:'Open Sans',sans-serif; line-height:1.4; white-space:nowrap;"></p>
+        <p id="cite-quote" style="font-size:11px; color:#253a40; font-family:'Open Sans',sans-serif; line-height:1.4;"></p>
+      </div>
+      <!-- Link -->
+      <div style="display:flex; justify-content:flex-end;">
+        <button id="cite-link-btn" style="background:transparent; border:none; cursor:pointer; font-size:11px; font-weight:600; color:#296bbc; font-family:'Open Sans',sans-serif; display:flex; align-items:center; gap:3px; padding:4px; border-radius:4px;">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9.5 7v3a.5.5 0 01-.5.5H2a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5h3M7 1h4v4M5 7L11 1" stroke="#296bbc" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="cite-link-text">Open Note</span>
+        </button>
+      </div>
+    </div>
+    <!-- Down-pointing arrow -->
+    <div style="display:flex; justify-content:center; margin-top:-1px; line-height:0;">
+      <div style="width:0; height:0; border-left:11px solid transparent; border-right:11px solid transparent; border-top:7px solid white;"></div>
+    </div>
+  </div>
+
+  <script>
+    function openPaDialog() {
+      const overlay = document.getElementById('pa-dialog-overlay');
+      overlay.style.display = 'flex';
+    }
+    function closePaDialog() {
+      document.getElementById('pa-dialog-overlay').style.display = 'none';
+      showPaQuestions();
+    }
+    function showPaReview() {
+      document.getElementById('pa-questions-view').style.display = 'none';
+      const rv = document.getElementById('pa-review-view');
+      rv.style.display = 'flex';
+    }
+    function showPaQuestions() {
+      document.getElementById('pa-review-view').style.display = 'none';
+      document.getElementById('pa-pending-view').style.display = 'none';
+      document.getElementById('pa-questions-view').style.display = 'flex';
+      const badge = document.getElementById('pa-status-badge');
+      badge.style.background = '#fdf4be'; badge.style.color = '#594f03'; badge.textContent = 'Input Needed';
+      document.getElementById('pa-questions-label').style.display = '';
+    }
+    function showPaSubmitted() {
+      document.getElementById('pa-review-view').style.display = 'none';
+      // Update status badge to Pending Response
+      const badge = document.getElementById('pa-status-badge');
+      badge.style.background = '#e4eaec'; badge.style.color = '#253a40'; badge.textContent = 'Pending Response';
+      // Hide "Payer Questions:" label
+      document.getElementById('pa-questions-label').style.display = 'none';
+      // Populate submitted details accordion if not yet done
+      const body = document.getElementById('pa-submitted-details-body');
+      if (!body.innerHTML.trim()) {
+        body.innerHTML = buildDetailsHTML([
+          { q: 'What is the primary diagnosis requiring treatment with Humira?', a: 'Rheumatoid Arthritis' },
+          { q: 'Has the patient tried and failed at least one conventional DMARD (e.g. methotrexate) for a minimum of 3 months?', a: 'Yes' },
+          { q: 'List all prior biologic or targeted DMARDS trialed, including dates and reasons for discontinuation.', a: 'Adalimumab (Humira) TNF Inhibitor 01/2023 - 07/2023, Patient failed to achieve 20% improvement in ACR score (ACR20) after 6 months of therapy. Etanercept (Enbrel) TNF Inhibitor 08/2023 - 02/2024 Initial moderate response for 3 months, followed by a significant flare in DAS28-ESR (Disease Activity Score) of > 5.1' },
+          { q: "What is the patient's most recent DAS28-CRP or CDAI score?", a: 'DAS28-CRP: 5.2' },
+          { q: 'Has the patient been screened for latent tuberculosis and hepatitis B prior to initiating therapy?', a: 'Yes, both negative' },
+          { q: "What is the patient's most recent DAS28-CRP or CDAI score?", a: 'DAS28-CRP: 5.2' },
+          { q: 'Is the prescriber a board-certified rheumatologist or gastroenterologist?', a: 'No' },
+          { q: 'Provide clinical justification if the patient does not meet standard step therapy requirements.', a: 'The patient presents with highly aggressive, seropositive Rheumatoid Arthritis (RF+ and Anti-CCP >250 U/mL) and has already demonstrated a class-wide failure of TNF inhibitors (Adalimumab and Etanercept). Continuing with a third TNF inhibitor (e.g., Infliximab) is clinically inappropriate and likely to result in further irreversible joint erosions, as evidenced by recent X-rays of the bilateral MCP joints showing new marginal erosions' }
+        ], ['Rheumatology Consult - 02/10/2026.pdf', 'Visit Note - 02/09/2026.pdf']);
+      }
+      document.getElementById('pa-pending-view').style.display = 'flex';
+    }
+    function togglePaSubmittedDetails() {
+      const body = document.getElementById('pa-submitted-details-body');
+      const chevron = document.getElementById('pa-submitted-chevron');
+      const open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : 'block';
+      chevron.style.transform = open ? '' : 'rotate(180deg)';
+    }
+    document.getElementById('pa-dialog-overlay').addEventListener('click', function(e) {
+      if (e.target === this) closePaDialog();
+    });
+
+    function openDenialDialog() {
+      document.getElementById('denial-dialog-overlay').style.display = 'flex';
+    }
+    function closeDenialDialog() {
+      document.getElementById('denial-dialog-overlay').style.display = 'none';
+    }
+    function toggleSubmittedDetails() {
+      const body = document.getElementById('submitted-details-body');
+      const chevron = document.getElementById('submitted-chevron');
+      const open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : 'block';
+      chevron.style.transform = open ? '' : 'rotate(180deg)';
+    }
+    document.getElementById('denial-dialog-overlay').addEventListener('click', function(e) {
+      if (e.target === this) closeDenialDialog();
+    });
+
+    const pendingData = {
+      berstrom: {
+        title: 'Thomas Berstrom - Rivaroxaban (Xarelto) 20mg',
+        ref: 'AUTH-2024-8834722',
+        date: '04/01/2026',
+        provider: 'Staff One',
+        insurance: 'Aetna',
+        submittedTo: 'Submitted Successfully to Aetna',
+        submittedAt: 'April 1, 2026 at 9:15 AM',
+        questions: '6 of 6',
+        attachmentCount: '2 documents',
+        resolution: 'April 15, 2026',
+        attachmentFiles: ['Cardiology Consult - 03/15/2026.pdf', 'INR History 2023.pdf'],
+        qa: [
+          { q: 'What is the primary diagnosis requiring anticoagulation?', a: 'Atrial fibrillation with nonvalvular AF (I48.0)' },
+          { q: 'What is the patient\'s CHA₂DS₂-VASc score?', a: '5 (Age ≥75, hypertension, heart failure, prior TIA documented)' },
+          { q: 'Has the patient previously trialed warfarin or other anticoagulants?', a: 'Yes — warfarin in 2023, discontinued due to persistently unstable INR and monitoring burden' },
+          { q: 'What is the patient\'s current renal function (CrCl)?', a: 'CrCl 48 mL/min — dose adjusted to 15mg daily with evening meal' },
+          { q: 'Are there any contraindications or allergy concerns?', a: 'No known drug allergies; no significant prior bleeding events' },
+          { q: 'Clinical justification for Rivaroxaban over available alternatives?', a: 'Once-daily dosing supports adherence in 79-year-old patient; renal function within approved range for 15mg dosing; warfarin previously failed due to unstable INR and monitoring burden' }
+        ]
+      },
+      nandakumar: {
+        title: 'Priya Nandakumar - Semaglutide (Ozempic) 1mg',
+        ref: 'AUTH-2024-8834723',
+        date: '04/05/2026',
+        provider: 'Staff One',
+        insurance: 'Aetna',
+        submittedTo: 'Submitted Successfully to Aetna',
+        submittedAt: 'April 5, 2026 at 11:22 AM',
+        questions: '7 of 7',
+        attachmentCount: '1 document',
+        resolution: 'April 19, 2026',
+        attachmentFiles: ['HbA1c Lab Results - 03/18/2026.pdf'],
+        qa: [
+          { q: 'What is the primary diagnosis?', a: 'Type 2 Diabetes Mellitus without complications (E11.9)' },
+          { q: 'What is the most recent HbA1c value?', a: '8.7% (March 2026)' },
+          { q: 'What first-line therapies has the patient trialed?', a: 'Metformin 1000mg BID — ongoing for >6 months, inadequate glycemic control' },
+          { q: 'Any relevant comorbidities?', a: 'Obesity (BMI 31.2), mild hypertension managed with lisinopril' },
+          { q: 'Any cardiovascular risk factors or prior MACE events?', a: 'No prior MACE events; hypertension managed; no established ASCVD' },
+          { q: 'Are there any contraindications to GLP-1 receptor agonists?', a: 'No personal or family history of medullary thyroid carcinoma; no pancreatitis history' },
+          { q: 'Clinical justification for Semaglutide (Ozempic)?', a: 'Inadequate glycemic control on metformin monotherapy; GLP-1 agonist indicated for additional A1c reduction and weight benefit (BMI 31.2) in T2DM patient' }
+        ]
+      }
+    };
+
+    function buildDetailsHTML(qaRows, attachmentFiles) {
+      const docSVG = `<svg width="11" height="13" viewBox="0 0 11 13" fill="none"><path d="M6.5 1H2a1 1 0 00-1 1v9a1 1 0 001 1h7a1 1 0 001-1V4.5L6.5 1z" stroke="rgba(0,24,38,0.58)" stroke-width="1.1" stroke-linejoin="round"/><path d="M6.5 1v3.5H10" stroke="rgba(0,24,38,0.58)" stroke-width="1.1" stroke-linejoin="round"/><path d="M3 7h5M3 9h3" stroke="rgba(0,24,38,0.58)" stroke-width="0.9" stroke-linecap="round"/></svg>`;
+      const chips = attachmentFiles.map(f =>
+        `<div style="display:inline-flex;align-items:center;gap:5px;background:#f9fafb;border:1px solid #e4eaec;border-radius:4px;padding:4px 8px;align-self:flex-start;">${docSVG}<span style="font-size:11px;font-weight:600;color:rgba(0,24,38,0.58);font-family:'Open Sans',sans-serif;">${f}</span></div>`
+      ).join('');
+      const rows = qaRows.map((r, i) =>
+        `<div style="border:1px solid #e4eaec;border-radius:8px;padding:9px 17px;"><div style="display:flex;gap:10px;align-items:flex-start;"><span style="font-size:12px;color:rgba(0,24,38,0.58);font-family:'Open Sans',sans-serif;flex-shrink:0;min-width:14px;margin-top:2px;">${i+1}</span><div><p style="font-size:14px;font-weight:600;color:rgba(0,24,38,0.58);font-family:'Open Sans',sans-serif;margin:0 0 3px;">${r.q}</p><p style="font-size:14px;color:#253a40;font-family:'Open Sans',sans-serif;margin:0;line-height:1.5;padding-left:4px;">${r.a}</p></div></div></div>`
+      ).join('');
+      return `<div style="padding:12px;display:flex;flex-direction:column;gap:8px;"><div style="border:1px solid #e4eaec;border-radius:8px;padding:9px 17px;"><p style="font-size:14px;font-weight:600;color:rgba(0,24,38,0.58);font-family:'Open Sans',sans-serif;margin:0 0 7px;">Additional Notes &amp; Attachments</p><p style="font-size:14px;color:#253a40;font-family:'Open Sans',sans-serif;margin:0 0 5px;">Notes: n/a</p><p style="font-size:14px;font-weight:600;color:rgba(0,24,38,0.58);font-family:'Open Sans',sans-serif;margin:0 0 5px;">Attachments:</p><div style="display:flex;flex-direction:column;gap:4px;">${chips}</div></div>${rows}</div>`;
+    }
+
+    function openPendingDialog(key) {
+      const d = pendingData[key];
+      document.getElementById('pending-title').textContent = d.title;
+      document.getElementById('pending-ref').textContent = d.ref;
+      document.getElementById('pending-date').textContent = d.date;
+      document.getElementById('pending-provider').textContent = d.provider;
+      document.getElementById('pending-insurance').textContent = d.insurance;
+      document.getElementById('pending-submitted-to').textContent = d.submittedTo;
+      document.getElementById('pending-submitted-at').textContent = d.submittedAt;
+      document.getElementById('pending-questions').textContent = d.questions;
+      document.getElementById('pending-attachments').textContent = d.attachmentCount;
+      document.getElementById('pending-resolution').textContent = d.resolution;
+      document.getElementById('pending-details-body').innerHTML = buildDetailsHTML(d.qa, d.attachmentFiles);
+      // Reset accordion
+      document.getElementById('pending-details-body').style.display = 'none';
+      document.getElementById('pending-chevron').style.transform = '';
+      document.getElementById('pending-dialog-overlay').style.display = 'flex';
+    }
+    function closePendingDialog() {
+      document.getElementById('pending-dialog-overlay').style.display = 'none';
+    }
+    function togglePendingDetails() {
+      const body = document.getElementById('pending-details-body');
+      const chevron = document.getElementById('pending-chevron');
+      const open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : 'block';
+      chevron.style.transform = open ? '' : 'rotate(180deg)';
+    }
+    document.getElementById('pending-dialog-overlay').addEventListener('click', function(e) {
+      if (e.target === this) closePendingDialog();
+    });
+
+    const approvalData = {
+      mendieta: {
+        title: 'Carlos Mendieta - Empagliflozin (Jardiance) 10mg',
+        ref: 'AUTH-2024-8834724',
+        date: '04/15/2026',
+        provider: 'Staff One',
+        insurance: 'Aetna',
+        marqueeTitle: 'Prior Authorization Approved by Aetna',
+        marqueeSub: 'Approved on April 28, 2026 · Reference: APR-2026-88241',
+        effective: 'April 28, 2026',
+        expiration: 'April 28, 2027',
+        notes: 'Authorization granted for Empagliflozin (Jardiance) 10mg. Patient meets criteria for SGLT-2 inhibitor therapy based on Type 2 Diabetes diagnosis with established cardiovascular disease and inadequate glycemic control on metformin.',
+        nextSteps: "The medication can now be dispensed at the patient's pharmacy. A renewal submission will be required prior to the expiration date to continue coverage.",
+        attachmentFiles: ['Cardiology Risk Assessment - 04/10/2026.pdf', 'HbA1c Lab Results - 04/08/2026.pdf'],
+        qa: [
+          { q: 'Primary diagnosis for this PA request?', a: 'Type 2 Diabetes Mellitus with diabetic chronic kidney disease (E11.65)' },
+          { q: 'Most recent HbA1c value?', a: '8.1% (April 2026)' },
+          { q: 'Current diabetes medications trialed?', a: 'Metformin 1000mg BID — ongoing for >12 months, inadequate glycemic control' },
+          { q: 'Cardiovascular risk factors or established CVD?', a: 'Prior myocardial infarction (2022), hypertension — SGLT-2 inhibitor indicated for CV risk reduction' },
+          { q: 'Any contraindications to SGLT-2 inhibitors?', a: 'No; eGFR 68 mL/min/1.73m² — within approved range' },
+          { q: 'Clinical justification for Empagliflozin?', a: 'SGLT-2 inhibitor indicated per ADA/ACC guidelines for cardiovascular risk reduction and additional glycemic control in T2DM with established CVD' }
+        ]
+      },
+      beaumont: {
+        title: 'Linda Beaumont - Pembrolizumab (Keytruda) 200mg IV',
+        ref: 'AUTH-2024-8834725',
+        date: '04/15/2026',
+        provider: 'Staff One',
+        insurance: 'Aetna',
+        marqueeTitle: 'Prior Authorization Approved by Aetna',
+        marqueeSub: 'Approved on April 28, 2026 · Reference: APR-2026-88242',
+        effective: 'April 28, 2026',
+        expiration: 'October 28, 2026',
+        notes: 'Authorization granted for Pembrolizumab (Keytruda) 200mg IV infusion every 3 weeks. Patient meets criteria based on confirmed PD-L1 TPS ≥50% expression and oncologist recommendation for first-line NSCLC monotherapy.',
+        nextSteps: 'The medication can now be administered at an approved infusion center. A renewal submission will be required prior to the expiration date to continue coverage.',
+        attachmentFiles: ['Oncology Consult - 04/05/2026.pdf', 'PD-L1 Pathology Report - 04/02/2026.pdf'],
+        qa: [
+          { q: 'Primary diagnosis?', a: 'Non-small cell lung cancer (NSCLC), stage III (C34.10)' },
+          { q: 'PD-L1 expression level?', a: 'PD-L1 TPS ≥50% confirmed by immunohistochemistry biopsy' },
+          { q: 'Prior oncologic therapies?', a: 'No prior systemic chemotherapy; Keytruda indicated as first-line monotherapy per KEYNOTE-024' },
+          { q: 'ECOG performance status?', a: 'ECOG 1' },
+          { q: 'Active autoimmune conditions or contraindications to immunotherapy?', a: 'No active autoimmune disease; no prior immunotherapy; no systemic corticosteroid use' },
+          { q: 'Treating oncologist recommendation?', a: 'Dr. Sarah Kim, MD, Oncology — recommends pembrolizumab monotherapy based on high PD-L1 expression and patient fitness' },
+          { q: 'Clinical justification for Pembrolizumab?', a: 'Patient meets FDA-approved criteria for first-line NSCLC monotherapy with PD-L1 TPS ≥50%; standard of care per NCCN guidelines' }
+        ]
+      }
+    };
+
+    function openApprovalDialog(key) {
+      const d = approvalData[key];
+      document.getElementById('approval-title').textContent = d.title;
+      document.getElementById('approval-ref').textContent = d.ref;
+      document.getElementById('approval-date').textContent = d.date;
+      document.getElementById('approval-provider').textContent = d.provider;
+      document.getElementById('approval-insurance').textContent = d.insurance;
+      document.getElementById('approval-marquee-title').textContent = d.marqueeTitle;
+      document.getElementById('approval-marquee-sub').textContent = d.marqueeSub;
+      document.getElementById('approval-effective').textContent = d.effective;
+      document.getElementById('approval-expiration').textContent = d.expiration;
+      document.getElementById('approval-notes').textContent = d.notes;
+      document.getElementById('approval-next-steps').textContent = d.nextSteps;
+      document.getElementById('approval-details-body').innerHTML = buildDetailsHTML(d.qa, d.attachmentFiles);
+      document.getElementById('approval-details-body').style.display = 'none';
+      document.getElementById('approval-chevron').style.transform = '';
+      document.getElementById('approval-dialog-overlay').style.display = 'flex';
+    }
+    function closeApprovalDialog() {
+      document.getElementById('approval-dialog-overlay').style.display = 'none';
+    }
+    function toggleApprovalDetails() {
+      const body = document.getElementById('approval-details-body');
+      const chevron = document.getElementById('approval-chevron');
+      const open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : 'block';
+      chevron.style.transform = open ? '' : 'rotate(180deg)';
+    }
+    document.getElementById('approval-dialog-overlay').addEventListener('click', function(e) {
+      if (e.target === this) closeApprovalDialog();
+    });
+
+    const appealData = {
+      holloway: {
+        title: 'Margaret Holloway - Lisdexamfetamine (Vyvanse) 50mg',
+        ref: 'DEN-2026-44291',
+        date: '03/10/2026',
+        provider: 'Beverly Crusher',
+        insurance: 'Aetna',
+        deadline: 'April 9, 2026',
+        denialReason: 'Step therapy requirement not met',
+        denialNotes: 'Patient has not trialed preferred ADHD medications (methylphenidate or amphetamine salts) prior to requesting Lisdexamfetamine. Aetna requires documented failure of at least one preferred alternative.',
+        denialReviewer: 'Dr. Sarah Mitchell, PharmD',
+        attachmentFiles: ['ADHD Assessment - 01/15/2026.pdf'],
+        qa: [
+          { q: 'Primary diagnosis for this PA request?', a: 'Attention Deficit Hyperactivity Disorder, Combined Type (F90.2)' },
+          { q: 'Patient age and weight?', a: '68 years old, 134 lbs (60.8 kg)' },
+          { q: 'Has the patient previously trialed methylphenidate (e.g., Ritalin, Concerta)?', a: 'No prior trial of methylphenidate documented' },
+          { q: 'Has the patient previously trialed mixed amphetamine salts (e.g., Adderall, Mydayis)?', a: 'No prior trial of amphetamine salts documented' },
+          { q: 'Clinical justification for initiating Lisdexamfetamine (Vyvanse) as first-line stimulant?', a: 'Patient has cardiovascular comorbidities including controlled hypertension. Prescriber recommends Vyvanse due to smoother onset/offset and lower cardiovascular impact relative to immediate-release stimulants.' },
+          { q: 'Is this a new diagnosis or continuation of prior treatment?', a: 'Newly diagnosed in January 2026 following psychiatric evaluation. No prior stimulant therapy.' }
+        ]
+      },
+      okafor: {
+        title: 'Simone Okafor - Erenumab (Aimovig) 140mg',
+        ref: 'DEN-2026-44290',
+        date: '03/28/2026',
+        provider: 'Beverly Crusher',
+        insurance: 'Aetna',
+        deadline: 'April 27, 2026',
+        denialReason: 'Inadequate documentation of prior therapy failure',
+        denialNotes: 'Insufficient documentation provided for trial and failure of two oral preventive migraine medications. Aetna requires documented failure of at least two preferred oral alternatives before approving CGRP antagonist therapy.',
+        denialReviewer: 'Dr. James Chen, PharmD',
+        attachmentFiles: ['Neurology Consult - 03/20/2026.pdf'],
+        qa: [
+          { q: 'Primary diagnosis?', a: 'Chronic migraine with 15+ headache days/month (G43.719)' },
+          { q: 'Duration and frequency of migraines?', a: '8 years; 18–20 headache days per month, 12+ migraine days' },
+          { q: 'Prior preventive medications trialed?', a: 'Topiramate 100mg — 6 months, inadequate response; Amitriptyline 75mg — discontinued due to side effects (dry mouth, cognitive impairment)' },
+          { q: 'Acute medication use?', a: 'Sumatriptan PRN; no medication overuse confirmed' },
+          { q: 'Functional impact?', a: 'MIDAS grade IV (severe disability); significantly impacts work and daily activities' },
+          { q: 'Any contraindications to CGRP antagonists?', a: 'No known contraindications; cardiovascular history unremarkable' },
+          { q: 'Clinical justification for Erenumab (Aimovig)?', a: 'Patient meets criteria after failure of 2 oral preventive medications; CGRP antagonist supported by chronic migraine evidence and specialty guidelines' }
+        ]
+      }
+    };
+
+    function buildAppealChips(files) {
+      return files.map(f => `
+        <div style="display:flex; align-items:center; justify-content:space-between; background:#ebf4ff; border:1px dashed #59a0f8; border-radius:4px; padding:4px 12px; width:fit-content; min-width:280px; max-width:100%;">
+          <div style="display:flex; align-items:center; gap:5px;">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M9.5 1.5a2 2 0 012 2V11a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1h2.5" stroke="#253a40" stroke-width="1.1" stroke-linecap="round"/><path d="M6 8.5V3M4 5l2-2 2 2" stroke="#253a40" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span style="font-size:11px; font-weight:600; color:#253a40; font-family:'Open Sans',sans-serif;">${f}</span>
+          </div>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="margin-left:12px; cursor:pointer; flex-shrink:0;"><path d="M9 3L3 9M3 3l6 6" stroke="#253a40" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </div>`).join('');
+    }
+
+    function openAppealDialog(key) {
+      const d = appealData[key];
+      document.getElementById('appeal-title').textContent = d.title;
+      document.getElementById('appeal-ref').textContent = d.ref;
+      document.getElementById('appeal-date').textContent = d.date;
+      document.getElementById('appeal-provider').textContent = d.provider;
+      document.getElementById('appeal-insurance').textContent = d.insurance;
+      document.getElementById('appeal-deadline-text').textContent = d.deadline;
+      document.getElementById('appeal-denial-reason').textContent = d.denialReason;
+      document.getElementById('appeal-denial-notes').textContent = d.denialNotes;
+      document.getElementById('appeal-denial-reviewer').textContent = d.denialReviewer;
+      document.getElementById('appeal-denial-deadline').textContent = d.deadline;
+      document.getElementById('appeal-chips').innerHTML = buildAppealChips(d.attachmentFiles);
+      document.getElementById('appeal-submitted-body').innerHTML = buildDetailsHTML(d.qa, d.attachmentFiles);
+      document.getElementById('appeal-submitted-body').style.display = 'none';
+      document.getElementById('appeal-submitted-chevron').style.transform = '';
+      document.getElementById('appeal-dialog-overlay').style.display = 'flex';
+    }
+    function openAppealFromDenial() {
+      document.getElementById('denial-dialog-overlay').style.display = 'none';
+      openAppealDialog('holloway');
+    }
+    function closeAppealDialog() {
+      document.getElementById('appeal-dialog-overlay').style.display = 'none';
+    }
+    function toggleAppealSubmitted() {
+      const body = document.getElementById('appeal-submitted-body');
+      const chevron = document.getElementById('appeal-submitted-chevron');
+      const open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : 'block';
+      chevron.style.transform = open ? '' : 'rotate(180deg)';
+    }
+    document.getElementById('appeal-dialog-overlay').addEventListener('click', function(e) {
+      if (e.target === this) closeAppealDialog();
+    });
+
+    const citeData = [
+      {
+        date: "Visit Note 09/15/2025",
+        quote: "“Assessment & Plan: Rheumatoid Arthritis confirmed. Symmetric polyarthritis with morning stiffness >1 hour. RF and anti-CCP positive.”",
+        linkText: "Open Note"
+      },
+      {
+        date: "Lab Result 03/10/2026",
+        quote: "“DAS28-CRP: 5.2. Indicates moderate-to-high disease activity. Consistent with active RA requiring escalation of therapy.”",
+        linkText: "Open Result"
+      },
+      {
+        date: "Lab Result 02/18/2026",
+        quote: "“QuantiFERON-TB Gold: Negative. Hepatitis B surface antigen: Negative. HBsAb: Positive. Patient cleared for biologic therapy initiation.”",
+        linkText: "Open Result"
+      },
+      {
+        date: "Visit Note 03/18/2026",
+        quote: "“Disease activity remains elevated (DAS28-CRP 5.2). Inadequate response to methotrexate supports step-up to biologic (Humira).”",
+        linkText: "Open Note"
+      }
+    ];
+
+    function openCitePopover(e, num) {
+      e.stopPropagation();
+      const badge = e.currentTarget;
+      const popover = document.getElementById('cite-popover');
+      const data = citeData[num - 1];
+      document.getElementById('cite-date').textContent = data.date;
+      document.getElementById('cite-quote').textContent = data.quote;
+      document.getElementById('cite-link-text').textContent = data.linkText;
+      popover.style.display = 'block';
+      popover.style.visibility = 'hidden';
+      const rect = badge.getBoundingClientRect();
+      const pw = popover.offsetWidth;
+      const ph = popover.offsetHeight;
+      let left = rect.left + rect.width / 2 - pw / 2;
+      if (left < 8) left = 8;
+      if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+      const top = rect.top - ph - 6;
+      popover.style.left = left + 'px';
+      popover.style.top = top + 'px';
+      popover.style.visibility = 'visible';
+    }
+
+    function closeCitePopover() {
+      document.getElementById('cite-popover').style.display = 'none';
+    }
+
+    document.addEventListener('click', function(e) {
+      const popover = document.getElementById('cite-popover');
+      if (popover && popover.style.display !== 'none' && !popover.contains(e.target)) {
+        closeCitePopover();
+      }
+    });
+  </script>
+
+</body>
+</html>
